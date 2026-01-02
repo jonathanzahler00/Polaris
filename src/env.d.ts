@@ -14,7 +14,14 @@ declare namespace NodeJS {
     // Cron authentication
     CRON_SECRET: string;
 
+    // Sentry (optional)
+    NEXT_PUBLIC_SENTRY_DSN?: string;
+    SENTRY_ORG?: string;
+    SENTRY_PROJECT?: string;
+    SENTRY_AUTH_TOKEN?: string;
+
     // Next.js built-in
     NODE_ENV: "development" | "production" | "test";
+    CI?: string;
   }
 }

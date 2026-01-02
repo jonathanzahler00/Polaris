@@ -9,6 +9,8 @@ Polaris is a daily orientation check.
 - Supabase (Auth + Postgres)
 - Web Push (PWA) + VAPID keys
 - Cron endpoint for scheduled sends
+- Sentry error monitoring
+- Vitest + Testing Library for tests
 
 ## Supabase setup
 
@@ -69,6 +71,23 @@ npm run dev
 ```
 
 Open `http://localhost:3000`.
+
+## Testing
+
+Run tests:
+```bash
+npm test
+```
+
+Run tests with UI:
+```bash
+npm run test:ui
+```
+
+Run tests with coverage:
+```bash
+npm run test:coverage
+```
 
 ## Vercel cron
 

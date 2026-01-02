@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
+import { LogoutButton } from "@/components/LogoutButton";
 
 type Props = {
   initialLockedText: string | null;
@@ -48,8 +49,11 @@ export default function TodayClient({ initialLockedText, placeholder }: Props) {
   return (
     <div className="min-h-screen w-full">
       <div className="mx-auto flex min-h-screen w-full max-w-xl flex-col px-6 py-10">
-        <header className="text-sm font-medium tracking-wide text-neutral-900">
-          Polaris
+        <header className="flex items-center justify-between">
+          <div className="text-sm font-medium tracking-wide text-neutral-900">
+            Polaris
+          </div>
+          <LogoutButton />
         </header>
 
         {lockedText ? (
