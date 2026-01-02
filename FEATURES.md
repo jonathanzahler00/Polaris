@@ -35,7 +35,8 @@
 - **Cleanup**: Inactive subscriptions automatically marked as inactive
 
 ### ✅ Cron Jobs
-- **Frequency**: Runs every minute (configured in `vercel.json`)
+- **Frequency**: Runs every hour (configured in `vercel.json`)
+- **Vercel Hobby Limitation**: Limited to hourly/daily schedules (not per-minute)
 - **Smart Scheduling**: Only sends notifications at user's specified time
 - **Deduplication**: Tracks last notification date to prevent duplicates
 - **Authentication**: Secured with `CRON_SECRET` via Authorization header

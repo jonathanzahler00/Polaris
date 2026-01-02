@@ -91,13 +91,14 @@ npm run test:coverage
 
 ## Vercel cron
 
-The `vercel.json` file configures a cron job that runs every minute to check for users who need notifications.
+The `vercel.json` file configures a cron job that runs every hour to check for users who need notifications.
 
 **Automatic setup:**
 - The cron configuration is in `vercel.json`
 - Vercel will automatically create the cron job on deployment
 - Path: `/api/cron/send-notifications`
-- Schedule: `* * * * *` (every minute)
+- Schedule: `0 * * * *` (every hour at minute 0)
+- **Note:** Vercel Hobby plan only supports hourly or daily cron jobs
 
 **Security:**
 - The cron endpoint requires a secret header: `x-cron-secret`
@@ -108,6 +109,6 @@ The `vercel.json` file configures a cron job that runs every minute to check for
 If automatic cron doesn't work, manually create it in Vercel dashboard:
 - Go to your project → Settings → Cron Jobs
 - Add cron job with path `/api/cron/send-notifications`
-- Schedule: `* * * * *`
+- Schedule: `0 * * * *` (hourly) or `0 0 * * *` (daily at midnight UTC)
 - Headers: `x-cron-secret` = your `CRON_SECRET` value
 
