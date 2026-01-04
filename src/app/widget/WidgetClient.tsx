@@ -133,7 +133,14 @@ export default function WidgetClient({ initialToken, widgetUrl }: Props) {
                       1
                     </div>
                     <p className="text-sm text-neutral-700 flex-1">
-                      Install <span className="font-semibold">WebView Widget</span> from Google Play Store (free)
+                      Install <a
+                        href="https://play.google.com/store/apps/details?id=com.djinnworks.webviewwidget"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-semibold underline hover:text-neutral-900"
+                      >
+                        WebView Widget
+                      </a> from Google Play Store (free)
                     </p>
                   </div>
                 </div>
