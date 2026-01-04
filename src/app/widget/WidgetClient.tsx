@@ -116,23 +116,56 @@ export default function WidgetClient({ initialToken, widgetUrl }: Props) {
             )}
           </div>
 
-          {/* API Endpoint */}
+          {/* Widget URLs */}
           <div className="rounded-lg border border-neutral-200 bg-white p-6">
             <h2 className="text-lg font-medium text-neutral-900 mb-4">
-              Widget API URL
+              Widget URLs
             </h2>
-            <p className="text-sm text-neutral-600 mb-4">
-              Use this URL in your widget app to fetch your daily orientation.
-            </p>
-            <div className="p-3 rounded bg-neutral-50 border border-neutral-200 font-mono text-xs break-all mb-4">
-              {token ? `${widgetUrl}?token=${token}` : widgetUrl}
+
+            <div className="space-y-4">
+              {/* JSON API URL */}
+              <div>
+                <p className="text-sm font-medium text-neutral-700 mb-2">
+                  JSON API (for advanced widgets)
+                </p>
+                <p className="text-xs text-neutral-500 mb-2">
+                  Use with HTTP Request Widget, KWGT, or Scriptable
+                </p>
+                <div className="p-3 rounded bg-neutral-50 border border-neutral-200 font-mono text-xs break-all mb-2">
+                  {token ? `${widgetUrl}?token=${token}` : widgetUrl}
+                </div>
+                <button
+                  onClick={copyUrl}
+                  className="px-3 py-1.5 rounded text-xs font-medium bg-neutral-900 text-white hover:bg-neutral-800"
+                >
+                  {copied ? "Copied!" : "Copy JSON URL"}
+                </button>
+              </div>
+
+              {/* HTML View URL */}
+              <div>
+                <p className="text-sm font-medium text-neutral-700 mb-2">
+                  Simple View (for WebView widgets)
+                </p>
+                <p className="text-xs text-neutral-500 mb-2">
+                  Pre-formatted HTML, works with any WebView widget app
+                </p>
+                <div className="p-3 rounded bg-neutral-50 border border-neutral-200 font-mono text-xs break-all mb-2">
+                  {token ? `${widgetUrl.replace('/api/widget/today', '/widget-view')}?token=${token}` : widgetUrl.replace('/api/widget/today', '/widget-view')}
+                </div>
+                <button
+                  onClick={() => {
+                    const htmlUrl = token ? `${widgetUrl.replace('/api/widget/today', '/widget-view')}?token=${token}` : widgetUrl.replace('/api/widget/today', '/widget-view');
+                    navigator.clipboard.writeText(htmlUrl);
+                    setCopied(true);
+                    setTimeout(() => setCopied(false), 2000);
+                  }}
+                  className="px-3 py-1.5 rounded text-xs font-medium bg-neutral-900 text-white hover:bg-neutral-800"
+                >
+                  {copied ? "Copied!" : "Copy HTML URL"}
+                </button>
+              </div>
             </div>
-            <button
-              onClick={copyUrl}
-              className="px-4 py-2 rounded-lg bg-neutral-900 text-sm font-medium text-white hover:bg-neutral-800"
-            >
-              {copied ? "Copied!" : "Copy URL"}
-            </button>
           </div>
 
           {/* Instructions */}
@@ -142,9 +175,36 @@ export default function WidgetClient({ initialToken, widgetUrl }: Props) {
             </h2>
 
             <div className="space-y-6">
+              <div className="rounded border border-green-200 bg-green-50 p-4">
+                <h3 className="text-sm font-semibold text-green-900 mb-2">
+                  ⭐ Android - Easiest #1 (WebView Widget)
+                </h3>
+                <ol className="list-decimal list-inside space-y-1 text-sm text-neutral-700">
+                  <li>Install "WebView Widget" from Play Store (free)</li>
+                  <li>Add widget to home screen</li>
+                  <li>Paste the "Simple View (HTML)" URL from above</li>
+                  <li>Set refresh to 30-60 minutes</li>
+                  <li>Done! Automatically formatted</li>
+                </ol>
+              </div>
+
+              <div className="rounded border border-blue-200 bg-blue-50 p-4">
+                <h3 className="text-sm font-semibold text-blue-900 mb-2">
+                  ⭐ Android - Easiest #2 (HTTP Request Widget)
+                </h3>
+                <ol className="list-decimal list-inside space-y-1 text-sm text-neutral-700">
+                  <li>Install "HTTP Request Widget" from Play Store (free)</li>
+                  <li>Add widget to home screen</li>
+                  <li>Paste the "JSON API" URL from above</li>
+                  <li>Set display field to: "text"</li>
+                  <li>Set refresh to 30-60 minutes</li>
+                  <li>Done! No coding required</li>
+                </ol>
+              </div>
+
               <div>
                 <h3 className="text-sm font-semibold text-neutral-900 mb-2">
-                  📱 Android (KWGT)
+                  📱 Android (KWGT) - Advanced
                 </h3>
                 <ol className="list-decimal list-inside space-y-1 text-sm text-neutral-600">
                   <li>Install KWGT from Google Play Store</li>
