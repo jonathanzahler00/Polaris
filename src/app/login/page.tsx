@@ -1,9 +1,9 @@
 import { redirect } from "next/navigation";
 
-import { ensureProfileExists, getProfileForUser } from "@/lib/profile";
+import { ensureProfileExists, getProfileForUser } from "@/lib/services/profile";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
-import LoginClient from "./LoginClient";
+import LoginClient from "@/components/features/login/LoginClient";
 
 export default async function LoginPage() {
   const supabase = await createSupabaseServerClient();

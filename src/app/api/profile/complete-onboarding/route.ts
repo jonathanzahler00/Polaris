@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { isValidTimezone } from "@/lib/timezone";
+import { isValidTimezone } from "@/lib/utils/timezone";
 
 type Body = {
   timezone: string;

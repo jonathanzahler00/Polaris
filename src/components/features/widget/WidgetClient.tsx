@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { LogoutButton } from "@/components/LogoutButton";
+import { LogoutButton } from "@/components/layout/LogoutButton";
 import Link from "next/link";
 
 type Props = {

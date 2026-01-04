@@ -1,10 +1,10 @@
 import { redirect } from "next/navigation";
 
-import { getRequiredEnv } from "@/lib/env";
-import { ensureProfileExists, getProfileForUser } from "@/lib/profile";
+import { getRequiredEnv } from "@/lib/utils/env";
+import { ensureProfileExists, getProfileForUser } from "@/lib/services/profile";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
-import OnboardingClient from "./OnboardingClient";
+import OnboardingClient from "@/components/features/onboarding/OnboardingClient";
 
 export default async function OnboardingPage() {
   const supabase = await createSupabaseServerClient();

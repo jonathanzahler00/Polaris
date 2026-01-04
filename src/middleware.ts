@@ -1,7 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-import { getRequiredEnv } from "@/lib/env";
+import { getRequiredEnv } from "@/lib/utils/env";
 
 export async function middleware(request: NextRequest) {
   const response = NextResponse.next({

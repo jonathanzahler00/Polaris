@@ -3,9 +3,8 @@ import {
   getLocalDateISO,
   getLocalTimeHHmm,
   normalizeTimeToHHmm,
-  isHHmm,
   daysSinceSignupInTimezone,
-} from "../date";
+} from "@/lib/utils/date";
 
 describe("date utilities", () => {
   describe("getLocalDateISO", () => {
@@ -51,23 +50,6 @@ describe("date utilities", () => {
     it("handles edge cases", () => {
       expect(normalizeTimeToHHmm("00:00")).toBe("00:00");
       expect(normalizeTimeToHHmm("00:00:00")).toBe("00:00");
-    });
-  });
-
-  describe("isHHmm", () => {
-    it("validates correct HH:mm format", () => {
-      expect(isHHmm("09:30")).toBe(true);
-      expect(isHHmm("00:00")).toBe(true);
-      expect(isHHmm("23:59")).toBe(true);
-    });
-
-    it("rejects invalid formats", () => {
-      expect(isHHmm("9:30")).toBe(false); // single digit hour
-      expect(isHHmm("09:5")).toBe(false); // single digit minute
-      expect(isHHmm("24:00")).toBe(false); // invalid hour
-      expect(isHHmm("09:60")).toBe(false); // invalid minute
-      expect(isHHmm("invalid")).toBe(false);
-      expect(isHHmm("")).toBe(false);
     });
   });
 

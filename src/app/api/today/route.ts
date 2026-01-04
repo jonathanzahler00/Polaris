@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { getTodayForAuthedUser } from "@/lib/today";
+import { getTodayForAuthedUser } from "@/lib/services/today";
 
 export async function GET() {
   try {

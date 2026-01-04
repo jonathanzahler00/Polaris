@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import webPush from "web-push";
 
-import { getLocalDateISO, getLocalTimeHHmm, normalizeTimeToHHmm } from "@/lib/date";
-import { getRequiredEnv } from "@/lib/env";
+import { getLocalDateISO, getLocalTimeHHmm, normalizeTimeToHHmm } from "@/lib/utils/date";
+import { getRequiredEnv } from "@/lib/utils/env";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 
 const NOTIFICATION_BODY = "Before the day takes over.";

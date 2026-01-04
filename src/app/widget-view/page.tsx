@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
-import { getLocalDateISO } from "@/lib/date";
-import { getProfileForUser } from "@/lib/profile";
+import { getLocalDateISO } from "@/lib/utils/date";
+import { getProfileForUser } from "@/lib/services/profile";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 /**

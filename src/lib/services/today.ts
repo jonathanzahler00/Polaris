@@ -1,4 +1,4 @@
-import { getLocalDateISO } from "@/lib/date";
+import { getLocalDateISO } from "@/lib/utils/date";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export async function getTodayForAuthedUser() {

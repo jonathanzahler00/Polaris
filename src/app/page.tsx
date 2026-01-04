@@ -1,10 +1,9 @@
 import { redirect } from "next/navigation";
 
-import { daysSinceSignupInTimezone } from "@/lib/date";
-import { ensureProfileExists, getProfileForUser } from "@/lib/profile";
+import { daysSinceSignupInTimezone, getLocalDateISO } from "@/lib/utils/date";
+import { ensureProfileExists, getProfileForUser } from "@/lib/services/profile";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { getLocalDateISO } from "@/lib/date";
-import TodayClient from "@/app/today-client";
+import TodayClient from "@/components/features/today/TodayClient";
 
 const PLACEHOLDER_EXAMPLES = [
   "…being present during dinner.",

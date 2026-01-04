@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { ensureProfileExists } from "@/lib/profile";
+import { ensureProfileExists } from "@/lib/services/profile";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 /**

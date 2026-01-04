@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { ensureProfileExists, getProfileForUser } from "@/lib/profile";
-import WidgetClient from "./WidgetClient";
+import { ensureProfileExists, getProfileForUser } from "@/lib/services/profile";
+import WidgetClient from "@/components/features/widget/WidgetClient";
 
 export default async function WidgetPage() {
   const supabase = await createSupabaseServerClient();

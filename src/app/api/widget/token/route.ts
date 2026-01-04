@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { randomBytes } from "crypto";
 
-import { safeError } from "@/lib/errors";
+import { safeError } from "@/lib/utils/errors";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 /**
