@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { getLocalDateISO } from "@/lib/date";
 import { getProfileForUser } from "@/lib/profile";
 
@@ -30,13 +31,17 @@ export async function GET(request: NextRequest) {
 
     // Try widget token authentication first
     if (widgetToken) {
-      // Query users by widget token
-      const { data: matchedUsers, error: searchError } = await supabase
-        .rpc("get_user_by_widget_token", { token: widgetToken })
-        .maybeSingle();
+      // Use admin client to search for user with matching widget token
+      const adminClient = createSupabaseAdminClient();
+      const { data: { users }, error: searchError } = await adminClient.auth.admin.listUsers();
 
-      if (!searchError && matchedUsers) {
-        user = { id: matchedUsers.user_id };
+      if (!searchError && users) {
+        const matchedUser = users.find(
+          (u) => u.user_metadata?.widget_token === widgetToken
+        );
+        if (matchedUser) {
+          user = { id: matchedUser.id };
+        }
       }
     }
 
