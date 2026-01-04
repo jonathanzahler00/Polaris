@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { getLocalDateISO } from "@/lib/date";
+import { safeError } from "@/lib/errors";
 import { getProfileForUser } from "@/lib/profile";
 
 /**
@@ -78,7 +79,7 @@ export async function GET(request: NextRequest) {
 
     if (dbError) {
       return NextResponse.json(
-        { error: "Database error", message: dbError.message },
+        safeError(dbError, "Failed to fetch orientation"),
         { status: 500 }
       );
     }

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { isValidTimezone } from "@/lib/timezone";
 
 type Body = {
   timezone: string;
@@ -29,6 +30,11 @@ export async function POST(request: Request) {
     !isHHmm(body.notification_time)
   ) {
     return NextResponse.json({ error: "Bad request" }, { status: 400 });
+  }
+
+  // Validate timezone is a real IANA timezone
+  if (!isValidTimezone(body.timezone)) {
+    return NextResponse.json({ error: "Invalid timezone" }, { status: 400 });
   }
 
   const { error } = await supabase

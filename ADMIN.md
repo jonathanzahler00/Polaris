@@ -72,6 +72,59 @@ Polaris uses an email allowlist to control who can sign up. This is managed via 
 
 ---
 
+## Widget Token Security
+
+Widget tokens allow third-party apps (KWGT, Widgetsmith, Scriptable) to access a user's daily orientation without browser cookies.
+
+### Security Best Practices
+
+#### ✅ DO
+
+- **Use Authorization header** (preferred):
+  ```
+  Authorization: Bearer <token>
+  ```
+- **Keep tokens private** - Treat them like passwords
+- **Regenerate tokens** if you suspect they've been exposed
+- **Revoke tokens** when no longer needed
+
+#### ❌ DON'T
+
+- **Don't share tokens** in screenshots, public repos, or messages
+- **Don't use query string** (`?token=xxx`) unless necessary—tokens in URLs can appear in:
+  - Server logs
+  - Browser history
+  - Analytics/referrer headers
+- **Don't embed tokens** in client-side JavaScript that others can view
+
+### Token Lifecycle
+
+| Action | Endpoint | Method |
+|--------|----------|--------|
+| Generate new token | `/api/widget/token` | POST |
+| View current token | `/api/widget/token` | GET |
+| Revoke token | `/api/widget/token` | DELETE |
+
+### What Tokens Can Access
+
+Tokens provide **read-only** access to:
+- Today's orientation text
+- Whether it's locked
+- User's timezone
+
+Tokens **cannot**:
+- Lock/set orientations
+- Change profile settings
+- Access other users' data
+
+### If a Token is Compromised
+
+1. Go to the Widget page in the app
+2. Click "Regenerate Token" (this invalidates the old one)
+3. Update any widgets with the new token
+
+---
+
 ## Useful Links
 
 - **Vercel Dashboard:** https://vercel.com/dashboard

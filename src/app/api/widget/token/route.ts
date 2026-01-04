@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { randomBytes } from "crypto";
+
+import { safeError } from "@/lib/errors";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 /**
  * Widget Token Management API
@@ -41,10 +43,7 @@ export async function POST() {
     return NextResponse.json({ token });
   } catch (error) {
     console.error("Token generation error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return NextResponse.json(safeError(error, "Failed to generate token"), { status: 500 });
   }
 }
 
@@ -77,10 +76,7 @@ export async function DELETE() {
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Token revocation error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return NextResponse.json(safeError(error, "Failed to revoke token"), { status: 500 });
   }
 }
 
@@ -103,9 +99,6 @@ export async function GET() {
     return NextResponse.json({ token, exists: !!token });
   } catch (error) {
     console.error("Token fetch error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return NextResponse.json(safeError(error, "Failed to fetch token"), { status: 500 });
   }
 }
