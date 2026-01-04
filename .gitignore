@@ -40,6 +40,15 @@ yarn-error.log*
 # claude code
 .claude/
 
+# admin/internal documentation (keep private, visible only locally)
+ADMIN.md
+DEPLOYMENT.md
+FEATURES.md
+WIDGETS.md
+
+# database schema (keep private)
+supabase/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
