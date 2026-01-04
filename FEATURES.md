@@ -69,7 +69,19 @@
 - **Manifest**: Configured for standalone display mode
 - **Service Worker**: Handles push notifications and offline behavior
 - **Installable**: Can be added to home screen on mobile devices
-- **Icons**: SVG icons for scalability
+- **Icons**: Multiple sizes including maskable variants
+- **Splash Screens**: iOS-optimized startup images
+- **Offline Support**: Fallback page for network errors
+
+### ✅ Home Screen Widgets
+- **Widget API**: RESTful endpoint for widget data access
+- **Token Authentication**: Secure token-based auth for third-party apps
+- **Android Support**: Works with KWGT, Widget Launcher, and HTTP widgets
+- **iOS Support**: Compatible with Widgetsmith, Scriptable, Widget Wizard
+- **JSON Response**: Widget-friendly data format
+- **CORS Enabled**: Allows access from widget webviews
+- **Token Management**: Generate, revoke, and regenerate tokens
+- **Setup Page**: In-app widget configuration guide
 
 ## Developer Experience
 
@@ -82,6 +94,7 @@
 ### Documentation
 - **README.md**: Quick start and development guide
 - **DEPLOYMENT.md**: Complete deployment instructions with troubleshooting
+- **WIDGETS.md**: Complete widget setup guide for Android & iOS
 - **.env.example**: Template for all required environment variables
 - **FEATURES.md**: This file - comprehensive feature list
 
@@ -100,6 +113,10 @@
 | `/api/today` | GET | Get today's locked orientation |
 | `/api/today/lock` | POST | Submit daily orientation |
 | `/api/profile/complete-onboarding` | POST | Complete onboarding process |
+| `/api/widget/today` | GET | Get today's orientation for widgets (token auth) |
+| `/api/widget/token` | POST | Generate new widget token |
+| `/api/widget/token` | GET | Get current widget token |
+| `/api/widget/token` | DELETE | Revoke widget token |
 | `/api/push/subscribe` | POST | Enable push notifications |
 | `/api/push/unsubscribe` | POST | Disable push notifications |
 | `/api/cron/send-notifications` | GET | Send daily reminders (Vercel Cron) |

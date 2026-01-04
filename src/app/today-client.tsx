@@ -2,6 +2,7 @@
 
 import { useCallback, useMemo, useState } from "react";
 import { LogoutButton } from "@/components/LogoutButton";
+import Link from "next/link";
 
 type Props = {
   initialLockedText: string | null;
@@ -53,7 +54,15 @@ export default function TodayClient({ initialLockedText, placeholder }: Props) {
           <div className="text-sm font-medium tracking-wide text-neutral-900">
             Polaris
           </div>
-          <LogoutButton />
+          <div className="flex items-center gap-4">
+            <Link
+              href="/widget"
+              className="text-sm text-neutral-600 hover:text-neutral-900 underline"
+            >
+              Widget
+            </Link>
+            <LogoutButton />
+          </div>
         </header>
 
         {lockedText ? (

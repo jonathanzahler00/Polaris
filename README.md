@@ -1,6 +1,20 @@
 # Polaris
 
-Polaris is a daily orientation check.
+Polaris is a daily orientation check. Set your intention before the day takes over.
+
+**✨ New:** Home screen widgets for Android & iOS! See [WIDGETS.md](./WIDGETS.md) for setup instructions.
+
+## Features
+
+- 📝 Daily orientation text (1-100 characters)
+- 🔒 Immutable once locked (one per day)
+- 🌍 Timezone-aware
+- 📱 Progressive Web App (install on home screen)
+- 🔔 Push notifications (optional)
+- 📲 **Home screen widgets** (Android & iOS via third-party apps)
+- 🔐 Secure token-based widget API
+- 👤 User accounts with magic link auth
+- 🎨 Clean, minimal interface
 
 ## Tech
 
@@ -8,7 +22,7 @@ Polaris is a daily orientation check.
 - Tailwind CSS
 - Supabase (Auth + Postgres)
 - Web Push (PWA) + VAPID keys
-- Cron endpoint for scheduled sends
+- Widget API with secure tokens
 - Sentry error monitoring
 - Vitest + Testing Library for tests
 
