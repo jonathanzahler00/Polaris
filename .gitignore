@@ -45,6 +45,7 @@ ADMIN.md
 DEPLOYMENT.md
 FEATURES.md
 WIDGETS.md
+STRUCTURE.md
 
 # database schema (keep private)
 supabase/
