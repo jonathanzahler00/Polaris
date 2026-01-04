@@ -1,13 +1,23 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 
 export default function LoginClient() {
   const supabase = createSupabaseBrowserClient();
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<"idle" | "sending" | "sent">("idle");
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    const error = searchParams.get("error");
+    if (error === "not_authorized") {
+      setErrorMessage("Sorry, this app is invite-only. Your email is not on the access list.");
+    }
+  }, [searchParams]);
 
   const sendLink = async () => {
     const trimmed = email.trim();
@@ -30,6 +40,12 @@ export default function LoginClient() {
         </header>
 
         <main className="flex flex-1 flex-col justify-center gap-6">
+          {errorMessage && (
+            <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              {errorMessage}
+            </div>
+          )}
+
           <div className="text-base text-neutral-700">Sign in with email.</div>
 
           <div className="flex flex-col gap-3">

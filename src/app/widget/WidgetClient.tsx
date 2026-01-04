@@ -134,12 +134,12 @@ export default function WidgetClient({ initialToken, widgetUrl }: Props) {
                     </div>
                     <p className="text-sm text-neutral-700 flex-1">
                       Install <a
-                        href="https://play.google.com/store/apps/details?id=com.djinnworks.webviewwidget"
+                        href="https://play.google.com/store/apps/details?id=com.urysoft.widgery"
                         target="_blank"
                         rel="noopener noreferrer"
                         className="font-semibold underline hover:text-neutral-900"
                       >
-                        WebView Widget
+                        Widgery: Web Widget
                       </a> from Google Play Store (free)
                     </p>
                   </div>
@@ -178,7 +178,7 @@ export default function WidgetClient({ initialToken, widgetUrl }: Props) {
                       3
                     </div>
                     <p className="text-sm text-neutral-700 flex-1">
-                      Long-press home screen → Add widget → Select WebView Widget
+                      Long-press home screen → Add widget → Select Widgery widget
                     </p>
                   </div>
                 </div>

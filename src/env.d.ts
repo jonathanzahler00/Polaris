@@ -14,6 +14,10 @@ declare namespace NodeJS {
     // Cron authentication
     CRON_SECRET: string;
 
+    // Access control (optional)
+    // Comma-separated list: "user@email.com,*@company.com"
+    ALLOWED_EMAILS?: string;
+
     // Sentry (optional)
     NEXT_PUBLIC_SENTRY_DSN?: string;
     SENTRY_ORG?: string;
