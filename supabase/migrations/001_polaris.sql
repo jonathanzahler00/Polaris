@@ -18,13 +18,13 @@ alter table public.profiles enable row level security;
 create policy "profiles_select_own"
 on public.profiles
 for select
-using (auth.uid() = user_id);
+using ((select auth.uid()) = user_id);
 
 create policy "profiles_update_own"
 on public.profiles
 for update
-using (auth.uid() = user_id)
-with check (auth.uid() = user_id);
+using ((select auth.uid()) = user_id)
+with check ((select auth.uid()) = user_id);
 
 -- Create profile row on signup
 create or replace function public.handle_new_user()
@@ -65,12 +65,12 @@ alter table public.daily_orientations enable row level security;
 create policy "daily_orientations_select_own"
 on public.daily_orientations
 for select
-using (auth.uid() = user_id);
+using ((select auth.uid()) = user_id);
 
 create policy "daily_orientations_insert_own"
 on public.daily_orientations
 for insert
-with check (auth.uid() = user_id);
+with check ((select auth.uid()) = user_id);
 
 -- No update/delete policies (immutable)
 
@@ -92,16 +92,16 @@ alter table public.push_subscriptions enable row level security;
 create policy "push_subscriptions_select_own"
 on public.push_subscriptions
 for select
-using (auth.uid() = user_id);
+using ((select auth.uid()) = user_id);
 
 create policy "push_subscriptions_insert_own"
 on public.push_subscriptions
 for insert
-with check (auth.uid() = user_id);
+with check ((select auth.uid()) = user_id);
 
 create policy "push_subscriptions_update_own"
 on public.push_subscriptions
 for update
-using (auth.uid() = user_id)
-with check (auth.uid() = user_id);
+using ((select auth.uid()) = user_id)
+with check ((select auth.uid()) = user_id);
 
