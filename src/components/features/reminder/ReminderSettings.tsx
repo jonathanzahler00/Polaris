@@ -10,16 +10,42 @@ export function ReminderSettings({ onTimeSet }: Props) {
   const [reminderTime, setReminderTime] = useState<string>("");
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>("default");
   const [isEnabled, setIsEnabled] = useState(false);
+  const [canChangeTime, setCanChangeTime] = useState(true);
+  const [nextChangeDate, setNextChangeDate] = useState<string>("");
 
   useEffect(() => {
     // Load saved reminder time from localStorage
     const saved = localStorage.getItem("polaris_reminder_time");
     const enabled = localStorage.getItem("polaris_reminder_enabled") === "true";
+    const lastChanged = localStorage.getItem("polaris_reminder_last_changed");
 
     if (saved) {
       setReminderTime(saved);
     }
     setIsEnabled(enabled);
+
+    // Check if we can change the time (only on 1st of the month)
+    if (lastChanged) {
+      const lastChangedDate = new Date(lastChanged);
+      const now = new Date();
+      const currentMonth = now.getMonth();
+      const currentYear = now.getFullYear();
+      const lastChangedMonth = lastChangedDate.getMonth();
+      const lastChangedYear = lastChangedDate.getFullYear();
+
+      // Can only change if it's a new month AND it's the 1st
+      const isNewMonth = currentYear > lastChangedYear || currentMonth > lastChangedMonth;
+      const isFirstOfMonth = now.getDate() === 1;
+
+      setCanChangeTime(isNewMonth && isFirstOfMonth);
+
+      // Calculate next change date (1st of next month)
+      const nextMonth = new Date(currentYear, currentMonth + 1, 1);
+      setNextChangeDate(nextMonth.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }));
+    } else {
+      // First time - can change
+      setCanChangeTime(true);
+    }
 
     // Check notification permission
     if ("Notification" in window) {
@@ -50,9 +76,10 @@ export function ReminderSettings({ onTimeSet }: Props) {
       try {
         const registration = await navigator.serviceWorker.ready;
 
-        // Store the reminder time
+        // Store the reminder time and when it was changed
         localStorage.setItem("polaris_reminder_time", time);
         localStorage.setItem("polaris_reminder_enabled", "true");
+        localStorage.setItem("polaris_reminder_last_changed", new Date().toISOString());
 
         // Set up daily alarm using service worker
         await fetch("/api/reminder/schedule", {
@@ -62,6 +89,13 @@ export function ReminderSettings({ onTimeSet }: Props) {
         });
 
         setIsEnabled(true);
+        setCanChangeTime(false);
+
+        // Calculate next change date
+        const now = new Date();
+        const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+        setNextChangeDate(nextMonth.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }));
+
         onTimeSet?.(time);
       } catch (error) {
         console.error("Failed to schedule notification:", error);
@@ -111,8 +145,14 @@ export function ReminderSettings({ onTimeSet }: Props) {
             type="time"
             value={reminderTime}
             onChange={handleTimeChange}
-            className="h-10 px-3 rounded-lg border border-neutral-200 bg-white text-neutral-900 focus:border-neutral-400 focus:outline-none"
+            disabled={isEnabled && !canChangeTime}
+            className="h-10 px-3 rounded-lg border border-neutral-200 bg-white text-neutral-900 focus:border-neutral-400 focus:outline-none disabled:bg-neutral-100 disabled:text-neutral-500 disabled:cursor-not-allowed"
           />
+          {isEnabled && !canChangeTime && (
+            <p className="text-xs text-neutral-500 mt-1">
+              Time can be changed on {nextChangeDate}
+            </p>
+          )}
         </div>
 
         {notificationPermission === "denied" && (
