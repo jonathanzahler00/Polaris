@@ -1,8 +1,10 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useState, useEffect } from "react";
 import { LogoutButton } from "@/components/layout/LogoutButton";
 import Link from "next/link";
+import { ReminderSettings } from "@/components/features/reminder/ReminderSettings";
+import { AlarmModal } from "@/components/features/reminder/AlarmModal";
 
 type Props = {
   initialLockedText: string | null;
@@ -15,6 +17,17 @@ export default function TodayClient({ initialLockedText, placeholder }: Props) {
   const [isFocused, setIsFocused] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [justLocked, setJustLocked] = useState(false);
+  const [showAlarmModal, setShowAlarmModal] = useState(false);
+
+  // Check if we should show alarm modal (from notification click)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("alarm") === "true" && !lockedText) {
+      setShowAlarmModal(true);
+      // Remove alarm parameter from URL
+      window.history.replaceState({}, "", "/");
+    }
+  }, [lockedText]);
 
   const canLock = useMemo(() => {
     const len = text.trim().length;
@@ -66,11 +79,16 @@ export default function TodayClient({ initialLockedText, placeholder }: Props) {
         </header>
 
         {lockedText ? (
-          <main className="flex flex-1 items-center justify-center">
+          <main className="flex flex-1 flex-col items-center justify-center gap-12">
             <div className="w-full">
               <div className="mx-auto max-w-prose text-center text-2xl leading-relaxed text-neutral-900">
                 {lockedText}
               </div>
+            </div>
+
+            {/* Show reminder settings after locking */}
+            <div className="w-full">
+              <ReminderSettings />
             </div>
           </main>
         ) : (
@@ -112,6 +130,12 @@ export default function TodayClient({ initialLockedText, placeholder }: Props) {
           </main>
         )}
       </div>
+
+      {/* Alarm Modal */}
+      <AlarmModal
+        isOpen={showAlarmModal}
+        onClose={() => setShowAlarmModal(false)}
+      />
     </div>
   );
 }

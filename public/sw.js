@@ -115,19 +115,29 @@ self.addEventListener("push", (event) => {
   );
 });
 
-// Notification click
+// Notification click - Open with alarm modal
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
-  const url = event.notification?.data?.url || "/";
-  
+  const url = event.notification?.data?.url || "/?alarm=true";
+
   event.waitUntil(
     (async () => {
       const allClients = await clients.matchAll({ type: "window", includeUncontrolled: true });
+
+      // If there's an existing window, navigate it
       for (const client of allClients) {
-        if ("navigate" in client) await client.navigate(url);
-        if ("focus" in client) return client.focus();
+        if ("navigate" in client) {
+          await client.navigate(url);
+          if ("focus" in client) {
+            return client.focus();
+          }
+        }
       }
-      if (clients.openWindow) return clients.openWindow(url);
+
+      // Otherwise open a new window
+      if (clients.openWindow) {
+        return clients.openWindow(url);
+      }
     })()
   );
 });
