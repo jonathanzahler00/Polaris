@@ -52,18 +52,7 @@ async function showReminderNotification() {
       badge: "/icons/icon-96.png",
       tag: "polaris-daily-reminder",
       requireInteraction: true,
-      vibrate: [200, 100, 200],
       data: { url: "/?alarm=true" },
-      actions: [
-        {
-          action: "set-orientation",
-          title: "Set Now",
-        },
-        {
-          action: "dismiss",
-          title: "Later",
-        },
-      ],
     });
   } catch (error) {
     console.error("Failed to show notification:", error);
