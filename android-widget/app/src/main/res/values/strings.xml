@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Polaris</string>
+    <string name="widget_description">Display your daily orientation from Polaris</string>
+</resources>

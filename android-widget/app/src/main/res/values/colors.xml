@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Match Polaris web app neutral color scheme -->
+    <color name="background">#FAFAFA</color>
+    <color name="widget_background">#FFFFFF</color>
+    <color name="text_primary">#171717</color>
+    <color name="text_secondary">#737373</color>
+    <color name="widget_text">#171717</color>
+    <color name="widget_text_secondary">#737373</color>
+    <color name="accent">#171717</color>
+</resources>
