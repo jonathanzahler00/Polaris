@@ -65,12 +65,6 @@ export default function TodayClient({ initialLockedText, placeholder }: Props) {
           <div className="text-sm font-medium tracking-wide text-neutral-900">
             Polaris
           </div>
-          <Link
-            href="/settings"
-            className="text-sm text-neutral-600 hover:text-neutral-900"
-          >
-            Settings
-          </Link>
         </header>
 
         {lockedText ? (
@@ -121,13 +115,13 @@ export default function TodayClient({ initialLockedText, placeholder }: Props) {
         )}
       </div>
 
-      {/* Widget link - small 'w' in bottom right */}
+      {/* Settings link - small 's' in bottom right */}
       <Link
-        href="/widget"
+        href="/settings"
         className="fixed bottom-6 right-6 w-8 h-8 rounded-full bg-neutral-200 hover:bg-neutral-300 flex items-center justify-center text-neutral-600 hover:text-neutral-900 text-sm font-medium transition-colors"
-        title="Widget"
+        title="Settings"
       >
-        w
+        s
       </Link>
 
       {/* Alarm Modal */}
