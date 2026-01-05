@@ -64,19 +64,15 @@ export function ReminderSettings({ onTimeSet }: Props) {
     }
   };
 
-  const validateTime = (time: string): boolean => {
-    const [hours] = time.split(':').map(Number);
-    return hours >= 5 && hours < 8;
-  };
+  const timeOptions = [
+    { value: "05:00", label: "5:00 AM" },
+    { value: "06:00", label: "6:00 AM" },
+    { value: "07:00", label: "7:00 AM" },
+    { value: "08:00", label: "8:00 AM" },
+  ];
 
   const scheduleNotification = async (time: string) => {
     if (!time) return;
-
-    // Validate time is between 5-8 AM
-    if (!validateTime(time)) {
-      alert("Reminder time must be between 5:00 AM and 7:59 AM");
-      return;
-    }
 
     // Register service worker for notifications
     if ("serviceWorker" in navigator) {
@@ -108,7 +104,7 @@ export function ReminderSettings({ onTimeSet }: Props) {
     }
   };
 
-  const handleTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleTimeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const newTime = e.target.value;
     setReminderTime(newTime);
   };
@@ -116,11 +112,6 @@ export function ReminderSettings({ onTimeSet }: Props) {
   const handleSetReminder = async () => {
     if (!reminderTime) {
       alert("Please select a time first");
-      return;
-    }
-
-    if (!validateTime(reminderTime)) {
-      alert("Reminder time must be between 5:00 AM and 7:59 AM");
       return;
     }
 
@@ -144,20 +135,22 @@ export function ReminderSettings({ onTimeSet }: Props) {
               <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
               </svg>
-              <span className="font-medium">Daily reminder set for {reminderTime}</span>
+              <span className="font-medium">
+                Daily reminder: {timeOptions.find(t => t.value === reminderTime)?.label || reminderTime}
+              </span>
             </div>
           </div>
 
           {!canSetTime && (
             <p className="text-xs text-neutral-500">
-              Reminder time can be changed in {nextChangeDate}
+              Can be changed in {nextChangeDate}
             </p>
           )}
         </div>
       ) : (
         <div className="space-y-4">
           <p className="text-sm text-neutral-600">
-            Set a daily reminder between 5:00 AM - 7:59 AM. Can only be set once per month.
+            Set a daily reminder (your local time). Can only be set once per month.
           </p>
 
           {notificationPermission === "denied" && (
@@ -170,17 +163,21 @@ export function ReminderSettings({ onTimeSet }: Props) {
 
           <div>
             <label className="block text-sm font-medium text-neutral-700 mb-2">
-              Reminder Time (5:00 AM - 7:59 AM)
+              Reminder Time
             </label>
-            <input
-              type="time"
+            <select
               value={reminderTime}
               onChange={handleTimeChange}
-              min="05:00"
-              max="07:59"
               disabled={!canSetTime}
-              className="h-10 px-3 rounded-lg border border-neutral-200 bg-white text-neutral-900 focus:border-neutral-400 focus:outline-none disabled:bg-neutral-100 disabled:text-neutral-500 disabled:cursor-not-allowed"
-            />
+              className="h-10 px-3 rounded-lg border border-neutral-200 bg-white text-neutral-900 focus:border-neutral-400 focus:outline-none disabled:bg-neutral-100 disabled:text-neutral-500 disabled:cursor-not-allowed w-full"
+            >
+              <option value="">Select a time...</option>
+              {timeOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
             {!canSetTime && (
               <p className="text-xs text-neutral-500 mt-1">
                 Can be set again in {nextChangeDate}
