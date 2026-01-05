@@ -1,9 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useState, useEffect } from "react";
-import { LogoutButton } from "@/components/layout/LogoutButton";
 import Link from "next/link";
-import { ReminderSettings } from "@/components/features/reminder/ReminderSettings";
 import { AlarmModal } from "@/components/features/reminder/AlarmModal";
 
 type Props = {
@@ -61,34 +59,26 @@ export default function TodayClient({ initialLockedText, placeholder }: Props) {
   }, [canLock, text]);
 
   return (
-    <div className="min-h-screen w-full">
+    <div className="min-h-screen w-full relative">
       <div className="mx-auto flex min-h-screen w-full max-w-xl flex-col px-6 py-10">
         <header className="flex items-center justify-between">
           <div className="text-sm font-medium tracking-wide text-neutral-900">
             Polaris
           </div>
-          <div className="flex items-center gap-4">
-            <Link
-              href="/widget"
-              className="text-sm text-neutral-600 hover:text-neutral-900 underline"
-            >
-              Widget
-            </Link>
-            <LogoutButton />
-          </div>
+          <Link
+            href="/settings"
+            className="text-sm text-neutral-600 hover:text-neutral-900"
+          >
+            Settings
+          </Link>
         </header>
 
         {lockedText ? (
-          <main className="flex flex-1 flex-col items-center justify-center gap-12">
+          <main className="flex flex-1 items-center justify-center">
             <div className="w-full">
               <div className="mx-auto max-w-prose text-center text-2xl leading-relaxed text-neutral-900">
                 {lockedText}
               </div>
-            </div>
-
-            {/* Show reminder settings after locking */}
-            <div className="w-full">
-              <ReminderSettings />
             </div>
           </main>
         ) : (
@@ -131,6 +121,15 @@ export default function TodayClient({ initialLockedText, placeholder }: Props) {
         )}
       </div>
 
+      {/* Widget link - small 'w' in bottom right */}
+      <Link
+        href="/widget"
+        className="fixed bottom-6 right-6 w-8 h-8 rounded-full bg-neutral-200 hover:bg-neutral-300 flex items-center justify-center text-neutral-600 hover:text-neutral-900 text-sm font-medium transition-colors"
+        title="Widget"
+      >
+        w
+      </Link>
+
       {/* Alarm Modal */}
       <AlarmModal
         isOpen={showAlarmModal}
@@ -139,4 +138,3 @@ export default function TodayClient({ initialLockedText, placeholder }: Props) {
     </div>
   );
 }
-
