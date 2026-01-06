@@ -15,7 +15,7 @@ class TokenManager(context: Context) {
     companion object {
         private const val KEY_TOKEN = "widget_token"
         private const val KEY_BASE_URL = "base_url"
-        private const val DEFAULT_BASE_URL = "https://polaris-iota-orcin.vercel.app"
+        private const val DEFAULT_BASE_URL = "https://polarisapp.vercel.app"
     }
 
     fun saveToken(token: String) {
