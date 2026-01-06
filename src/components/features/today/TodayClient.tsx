@@ -18,6 +18,16 @@ export default function TodayClient({ initialLockedText, placeholder }: Props) {
   const [justLocked, setJustLocked] = useState(false);
   const [showAlarmModal, setShowAlarmModal] = useState(false);
   const [showReminderPrompt, setShowReminderPrompt] = useState(false);
+  const [showBlockingModal, setShowBlockingModal] = useState(false);
+
+  // Show blocking modal if no orientation is set for today
+  useEffect(() => {
+    if (!lockedText) {
+      setShowBlockingModal(true);
+    } else {
+      setShowBlockingModal(false);
+    }
+  }, [lockedText]);
 
   // Check if we should show alarm modal (from notification click)
   useEffect(() => {
@@ -103,6 +113,7 @@ export default function TodayClient({ initialLockedText, placeholder }: Props) {
       const data = (await res.json()) as { text: string };
       setLockedText(data.text);
       setJustLocked(true);
+      setShowBlockingModal(false);
     } finally {
       setIsSubmitting(false);
     }
@@ -185,6 +196,48 @@ export default function TodayClient({ initialLockedText, placeholder }: Props) {
         isOpen={showReminderPrompt}
         onClose={handleReminderPromptClose}
       />
+
+      {/* Blocking Modal - Forces daily orientation before accessing app */}
+      {showBlockingModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-neutral-900 px-6">
+          <div className="w-full max-w-md">
+            <h1 className="text-3xl font-bold text-white mb-2 text-center">
+              Set Your Orientation
+            </h1>
+            <p className="text-neutral-300 mb-8 text-center">
+              Before the day takes over.
+            </p>
+
+            <div className="space-y-4">
+              <div className="text-lg font-medium text-white">
+                Today, I show up by…
+              </div>
+
+              <input
+                value={text}
+                onChange={(e) => setText(e.target.value.slice(0, 100))}
+                placeholder={placeholder}
+                maxLength={100}
+                inputMode="text"
+                autoComplete="off"
+                autoFocus
+                className="h-12 w-full rounded-lg border border-neutral-600 bg-neutral-800 px-4 text-base text-white shadow-sm placeholder:text-neutral-500 focus:border-neutral-400 focus:outline-none"
+              />
+
+              <div className="text-xs text-neutral-400">{text.length}/100</div>
+
+              <button
+                type="button"
+                onClick={lockToday}
+                disabled={!canLock}
+                className="h-12 w-full rounded-lg bg-white text-sm font-medium text-neutral-900 shadow-sm transition-colors hover:bg-neutral-100 disabled:cursor-not-allowed disabled:bg-neutral-700 disabled:text-neutral-500"
+              >
+                {isSubmitting ? "Locking..." : "Lock Today"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
