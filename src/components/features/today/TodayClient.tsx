@@ -2,7 +2,6 @@
 
 import { useCallback, useMemo, useState, useEffect } from "react";
 import Link from "next/link";
-import { AlarmModal } from "@/components/features/reminder/AlarmModal";
 import { ReminderPromptModal } from "@/components/features/reminder/ReminderPromptModal";
 
 type Props = {
@@ -16,24 +15,14 @@ export default function TodayClient({ initialLockedText, placeholder }: Props) {
   const [isFocused, setIsFocused] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [justLocked, setJustLocked] = useState(false);
-  const [showAlarmModal, setShowAlarmModal] = useState(false);
   const [showReminderPrompt, setShowReminderPrompt] = useState(false);
   const [showBlockingModal, setShowBlockingModal] = useState(false);
 
-  // Show blocking modal if no orientation is set for today
-  useEffect(() => {
-    if (!lockedText) {
-      setShowBlockingModal(true);
-    } else {
-      setShowBlockingModal(false);
-    }
-  }, [lockedText]);
-
-  // Check if we should show alarm modal (from notification click)
+  // Check if we should show blocking modal (from notification click)
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get("alarm") === "true" && !lockedText) {
-      setShowAlarmModal(true);
+      setShowBlockingModal(true);
       // Remove alarm parameter from URL
       window.history.replaceState({}, "", "/");
     }
@@ -184,12 +173,6 @@ export default function TodayClient({ initialLockedText, placeholder }: Props) {
       >
         s
       </Link>
-
-      {/* Alarm Modal */}
-      <AlarmModal
-        isOpen={showAlarmModal}
-        onClose={() => setShowAlarmModal(false)}
-      />
 
       {/* Monthly Reminder Prompt Modal */}
       <ReminderPromptModal

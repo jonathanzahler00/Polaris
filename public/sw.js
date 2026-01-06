@@ -1,4 +1,4 @@
-const CACHE_NAME = "polaris-v2";
+const CACHE_NAME = "polaris-v3";
 const OFFLINE_URL = "/offline.html";
 
 // Assets to cache immediately on install
