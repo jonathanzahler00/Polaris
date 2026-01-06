@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { ReminderSettings } from "@/components/features/reminder/ReminderSettings";
 import { LogoutButton } from "@/components/layout/LogoutButton";
 
 export default function SettingsClient() {
@@ -20,8 +19,6 @@ export default function SettingsClient() {
 
         <main className="flex-1 space-y-6">
           <h1 className="text-2xl font-semibold text-neutral-900">Settings</h1>
-
-          <ReminderSettings />
 
           <div className="rounded-lg border border-neutral-200 bg-white p-6">
             <h2 className="text-lg font-semibold text-neutral-900 mb-4">

@@ -3,6 +3,7 @@
 import { useCallback, useMemo, useState, useEffect } from "react";
 import Link from "next/link";
 import { AlarmModal } from "@/components/features/reminder/AlarmModal";
+import { ReminderPromptModal } from "@/components/features/reminder/ReminderPromptModal";
 
 type Props = {
   initialLockedText: string | null;
@@ -16,6 +17,7 @@ export default function TodayClient({ initialLockedText, placeholder }: Props) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [justLocked, setJustLocked] = useState(false);
   const [showAlarmModal, setShowAlarmModal] = useState(false);
+  const [showReminderPrompt, setShowReminderPrompt] = useState(false);
 
   // Check if we should show alarm modal (from notification click)
   useEffect(() => {
@@ -26,6 +28,54 @@ export default function TodayClient({ initialLockedText, placeholder }: Props) {
       window.history.replaceState({}, "", "/");
     }
   }, [lockedText]);
+
+  // Check if we should show monthly reminder prompt
+  useEffect(() => {
+    const lastChanged = localStorage.getItem("polaris_reminder_last_changed");
+
+    if (!lastChanged) {
+      // First time - show prompt
+      setShowReminderPrompt(true);
+      return;
+    }
+
+    const lastChangedDate = new Date(lastChanged);
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+    const lastChangedMonth = lastChangedDate.getMonth();
+    const lastChangedYear = lastChangedDate.getFullYear();
+
+    // Show prompt if it's a new calendar month
+    const isNewMonth = currentYear > lastChangedYear || currentMonth > lastChangedMonth;
+    if (isNewMonth) {
+      setShowReminderPrompt(true);
+    }
+  }, []);
+
+  const handleReminderPromptClose = async (selectedTime?: string) => {
+    setShowReminderPrompt(false);
+
+    if (selectedTime) {
+      // Save the reminder time
+      localStorage.setItem("polaris_reminder_time", selectedTime);
+      localStorage.setItem("polaris_reminder_last_changed", new Date().toISOString());
+
+      // Schedule via API
+      try {
+        await fetch("/api/reminder/schedule", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ time: selectedTime }),
+        });
+      } catch (error) {
+        console.error("Failed to schedule reminder:", error);
+      }
+    } else {
+      // User skipped - still mark as "changed" to not prompt again this month
+      localStorage.setItem("polaris_reminder_last_changed", new Date().toISOString());
+    }
+  };
 
   const canLock = useMemo(() => {
     const len = text.trim().length;
@@ -128,6 +178,12 @@ export default function TodayClient({ initialLockedText, placeholder }: Props) {
       <AlarmModal
         isOpen={showAlarmModal}
         onClose={() => setShowAlarmModal(false)}
+      />
+
+      {/* Monthly Reminder Prompt Modal */}
+      <ReminderPromptModal
+        isOpen={showReminderPrompt}
+        onClose={handleReminderPromptClose}
       />
     </div>
   );

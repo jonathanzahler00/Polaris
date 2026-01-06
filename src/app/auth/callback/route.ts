@@ -53,18 +53,26 @@ export async function GET(request: Request) {
   const code = url.searchParams.get("code");
 
   if (!code) {
+    console.error("[Auth Callback] No code provided");
     return NextResponse.redirect(new URL("/login", url.origin));
   }
 
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase.auth.exchangeCodeForSession(code);
 
-  if (error || !data.user) {
+  if (error) {
+    console.error("[Auth Callback] Error exchanging code:", error.message);
+    return NextResponse.redirect(new URL("/login", url.origin));
+  }
+
+  if (!data.user) {
+    console.error("[Auth Callback] No user in response");
     return NextResponse.redirect(new URL("/login", url.origin));
   }
 
   // Check if email is allowed
   if (!isEmailAllowed(data.user.email)) {
+    console.log("[Auth Callback] Email not allowed:", data.user.email);
     await supabase.auth.signOut();
     return NextResponse.redirect(new URL("/login?error=not_authorized", url.origin));
   }
