@@ -32,17 +32,47 @@ export async function GET(request: NextRequest) {
 
     // Try widget token authentication first
     if (widgetToken) {
-      // Use admin client to search for user with matching widget token
-      const adminClient = createSupabaseAdminClient();
-      const { data: { users }, error: searchError } = await adminClient.auth.admin.listUsers();
+      try {
+        // Use admin client to search for user with matching widget token
+        const adminClient = createSupabaseAdminClient();
 
-      if (!searchError && users) {
-        const matchedUser = users.find(
-          (u) => u.user_metadata?.widget_token === widgetToken
-        );
-        if (matchedUser) {
-          user = { id: matchedUser.id };
+        // Paginate through users to find matching widget token
+        let page = 1;
+        const perPage = 1000; // Supabase max per page
+        let foundUser = false;
+
+        while (!foundUser && page <= 10) { // Max 10,000 users
+          const { data, error: searchError } = await adminClient.auth.admin.listUsers({
+            page,
+            perPage,
+          });
+
+          if (searchError) {
+            console.error("Error listing users:", searchError);
+            break;
+          }
+
+          if (data?.users) {
+            const matchedUser = data.users.find(
+              (u) => u.user_metadata?.widget_token === widgetToken
+            );
+            if (matchedUser) {
+              user = { id: matchedUser.id };
+              foundUser = true;
+              break;
+            }
+          }
+
+          // If we got fewer users than perPage, we've reached the end
+          if (!data?.users || data.users.length < perPage) {
+            break;
+          }
+
+          page++;
         }
+      } catch (tokenError) {
+        console.error("Widget token authentication error:", tokenError);
+        // Don't fail here, fall through to session auth
       }
     }
 
@@ -62,7 +92,7 @@ export async function GET(request: NextRequest) {
     }
 
     const profile = await getProfileForUser(user.id);
-    if (!profile.onboarding_completed) {
+    if (!profile || !profile.onboarding_completed) {
       return NextResponse.json(
         { error: "Onboarding not completed", message: "Please complete onboarding first" },
         { status: 403 }
@@ -101,8 +131,16 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error("Widget API error:", error);
+    console.error("Error stack:", error instanceof Error ? error.stack : "No stack trace");
+    console.error("Error details:", JSON.stringify(error, null, 2));
     return NextResponse.json(
-      { error: "Internal server error" },
+      {
+        error: "Internal server error",
+        message: error instanceof Error ? error.message : "Unknown error",
+        ...(process.env.NODE_ENV === "development" && {
+          stack: error instanceof Error ? error.stack : undefined
+        })
+      },
       { status: 500 }
     );
   }
