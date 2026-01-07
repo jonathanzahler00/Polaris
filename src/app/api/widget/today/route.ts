@@ -107,7 +107,10 @@ export async function GET(request: NextRequest) {
     // completed full onboarding in the PWA
 
     const today = getLocalDateISO(profile.timezone);
-    const { data: orientation, error: dbError } = await supabase
+
+    // Use admin client to bypass RLS for widget token authentication
+    const adminClient = createSupabaseAdminClient();
+    const { data: orientation, error: dbError } = await adminClient
       .from("daily_orientations")
       .select("text, locked_at")
       .eq("user_id", user.id)
