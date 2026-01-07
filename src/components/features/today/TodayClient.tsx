@@ -109,8 +109,8 @@ export default function TodayClient({ initialLockedText, placeholder }: Props) {
   }, [canLock, text]);
 
   return (
-    <div className="min-h-screen w-full relative">
-      <div className="mx-auto flex min-h-screen w-full max-w-xl flex-col px-6 py-10">
+    <div className="h-screen w-full overflow-hidden relative">
+      <div className="mx-auto flex h-full w-full max-w-xl flex-col px-6 py-10">
         <header className="flex items-center justify-between">
           <div className="text-sm font-medium tracking-wide text-neutral-900">
             Polaris
