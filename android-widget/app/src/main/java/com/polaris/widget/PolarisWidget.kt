@@ -7,6 +7,7 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.util.Log
 import android.widget.RemoteViews
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequestBuilder
@@ -123,14 +124,28 @@ class PolarisWidget : AppWidgetProvider() {
         ) {
             CoroutineScope(Dispatchers.IO).launch {
                 try {
-                    val api = PolarisApiClient.create(tokenManager.getBaseUrl())
-                    val token = tokenManager.getToken() ?: return@launch
+                    val baseUrl = tokenManager.getBaseUrl()
+                    val token = tokenManager.getToken()
+
+                    Log.d("PolarisWidget", "Fetching orientation - BaseUrl: $baseUrl, Token: ${token?.take(10)}...")
+
+                    if (token == null) {
+                        Log.e("PolarisWidget", "Token is null!")
+                        return@launch
+                    }
+
+                    val api = PolarisApiClient.create(baseUrl)
                     val response = api.getTodayOrientation(token)
+
+                    Log.d("PolarisWidget", "Response code: ${response.code()}")
+                    Log.d("PolarisWidget", "Response successful: ${response.isSuccessful}")
 
                     if (response.isSuccessful) {
                         val data = response.body()
                         val text = data?.text ?: "Not set yet"
                         val date = data?.date ?: ""
+
+                        Log.d("PolarisWidget", "Success - Text: $text, Date: $date")
 
                         CoroutineScope(Dispatchers.Main).launch {
                             views.setTextViewText(R.id.widget_text, text)
@@ -141,8 +156,11 @@ class PolarisWidget : AppWidgetProvider() {
                             appWidgetManager.updateAppWidget(component, views)
                         }
                     } else {
+                        val errorBody = response.errorBody()?.string()
+                        Log.e("PolarisWidget", "API Error: ${response.code()} - $errorBody")
+
                         CoroutineScope(Dispatchers.Main).launch {
-                            views.setTextViewText(R.id.widget_text, "Error loading")
+                            views.setTextViewText(R.id.widget_text, "Error ${response.code()}")
                             views.setTextViewText(R.id.widget_date, "Tap to retry")
 
                             val appWidgetManager = AppWidgetManager.getInstance(context)
@@ -151,10 +169,12 @@ class PolarisWidget : AppWidgetProvider() {
                         }
                     }
                 } catch (e: Exception) {
+                    Log.e("PolarisWidget", "Exception fetching orientation", e)
                     e.printStackTrace()
+
                     CoroutineScope(Dispatchers.Main).launch {
                         views.setTextViewText(R.id.widget_text, "Connection error")
-                        views.setTextViewText(R.id.widget_date, "Check internet")
+                        views.setTextViewText(R.id.widget_date, e.message ?: "Check internet")
 
                         val appWidgetManager = AppWidgetManager.getInstance(context)
                         val component = ComponentName(context, PolarisWidget::class.java)
