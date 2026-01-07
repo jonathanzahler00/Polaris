@@ -28,7 +28,7 @@ data class OrientationResponse(
  * Polaris API interface
  */
 interface PolarisApi {
-    @GET("/api/widget/today")
+    @GET("api/widget/today")
     suspend fun getTodayOrientation(
         @Query("token") token: String
     ): Response<OrientationResponse>
