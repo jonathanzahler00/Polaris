@@ -95,12 +95,16 @@ export async function GET(request: NextRequest) {
     await ensureProfileExists(user.id);
 
     const profile = await getProfileForUser(user.id);
-    if (!profile || !profile.onboarding_completed) {
+    if (!profile) {
       return NextResponse.json(
-        { error: "Onboarding not completed", message: "Please complete onboarding first" },
-        { status: 403 }
+        { error: "Profile error", message: "Unable to load profile" },
+        { status: 500 }
       );
     }
+
+    // Note: We don't require onboarding_completed for widget API
+    // Users should be able to see their orientations via widget even if they haven't
+    // completed full onboarding in the PWA
 
     const today = getLocalDateISO(profile.timezone);
     const { data: orientation, error: dbError } = await supabase
