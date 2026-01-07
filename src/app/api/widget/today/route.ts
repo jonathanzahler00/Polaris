@@ -3,7 +3,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { getLocalDateISO } from "@/lib/utils/date";
 import { safeError } from "@/lib/utils/errors";
-import { getProfileForUser } from "@/lib/services/profile";
+import { getProfileForUser, ensureProfileExists } from "@/lib/services/profile";
 
 /**
  * Widget API endpoint for fetching today's orientation
@@ -90,6 +90,9 @@ export async function GET(request: NextRequest) {
         { status: 401 }
       );
     }
+
+    // Ensure profile exists (auto-create if missing)
+    await ensureProfileExists(user.id);
 
     const profile = await getProfileForUser(user.id);
     if (!profile || !profile.onboarding_completed) {
