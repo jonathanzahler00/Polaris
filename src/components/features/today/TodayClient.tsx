@@ -119,7 +119,10 @@ export default function TodayClient({ initialLockedText, placeholder }: Props) {
 
         {lockedText ? (
           <main className="flex flex-1 items-center justify-center">
-            <div className="w-full">
+            <div className="w-full space-y-4">
+              <div className="text-center text-sm font-medium tracking-wide text-neutral-500">
+                Today's Focus
+              </div>
               <div className="mx-auto max-w-prose text-center text-2xl leading-relaxed text-neutral-900">
                 {lockedText}
               </div>
