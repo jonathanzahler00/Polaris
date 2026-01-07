@@ -9,6 +9,17 @@
     android:gravity="center">
 
     <TextView
+        android:id="@+id/widget_title"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Today's Focus"
+        android:textSize="12sp"
+        android:textColor="@color/widget_text_secondary"
+        android:gravity="center"
+        android:layout_marginBottom="8dp"
+        android:letterSpacing="0.05" />
+
+    <TextView
         android:id="@+id/widget_text"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
