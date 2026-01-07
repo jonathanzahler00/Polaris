@@ -7,8 +7,21 @@
 # Retrofit
 -keepattributes Signature
 -keepattributes Exceptions
+-keepattributes RuntimeVisibleAnnotations
+-keepattributes RuntimeInvisibleAnnotations
+-keepattributes RuntimeVisibleParameterAnnotations
+-keepattributes RuntimeInvisibleParameterAnnotations
+-keepattributes EnclosingMethod
+
 -dontwarn retrofit2.**
+-dontwarn org.codehaus.mojo.**
 -keep class retrofit2.** { *; }
+-keepclasseswithmembers class * {
+    @retrofit2.http.* <methods>;
+}
+-keepclassmembernames,allowobfuscation interface * {
+    @retrofit2.http.* <methods>;
+}
 
 # Gson
 -keepattributes Signature
