@@ -17,7 +17,7 @@ export default async function WidgetPage() {
   if (!profile.onboarding_completed) redirect("/onboarding");
 
   const widgetToken = user.user_metadata?.widget_token || null;
-  const widgetUrl = `${process.env.NEXT_PUBLIC_SITE_URL || "https://polaris-iota-orcin.vercel.app"}/api/widget/today`;
+  const widgetUrl = `${process.env.NEXT_PUBLIC_SITE_URL || "https://polarisapp.vercel.app"}/api/widget/today`;
 
   return <WidgetClient initialToken={widgetToken} widgetUrl={widgetUrl} />;
 }

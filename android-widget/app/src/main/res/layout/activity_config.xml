@@ -19,7 +19,7 @@
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Get your widget token from:\npolaris-iota-orcin.vercel.app/widget"
+        android:text="Get your widget token from:\npolarisapp.vercel.app/widget"
         android:textSize="14sp"
         android:textColor="@color/text_secondary"
         android:gravity="center"
