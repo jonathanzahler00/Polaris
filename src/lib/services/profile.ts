@@ -2,8 +2,11 @@ import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export async function ensureProfileExists(userId: string) {
-  const supabase = await createSupabaseServerClient();
-  const { data } = await supabase
+  // Use admin client to bypass RLS for profile creation
+  const admin = createSupabaseAdminClient();
+
+  // Check if profile exists using admin client
+  const { data } = await admin
     .from("profiles")
     .select("user_id")
     .eq("user_id", userId)
@@ -11,19 +14,23 @@ export async function ensureProfileExists(userId: string) {
 
   if (data?.user_id) return;
 
-  // Fallback: create the profile server-side if the auth trigger isn't set up yet.
-  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) return;
-
-  const admin = createSupabaseAdminClient();
+  // Create the profile with default values
   await admin
     .from("profiles")
-    .upsert({ user_id: userId }, { onConflict: "user_id", ignoreDuplicates: true })
+    .upsert({
+      user_id: userId,
+      timezone: "America/New_York",
+      notification_time: "07:00",
+      notifications_enabled: false,
+      onboarding_completed: false
+    }, { onConflict: "user_id", ignoreDuplicates: true })
     .throwOnError();
 }
 
 export async function getProfileForUser(userId: string) {
-  const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase
+  // Use admin client to bypass RLS when called from widget API
+  const admin = createSupabaseAdminClient();
+  const { data, error } = await admin
     .from("profiles")
     .select("*")
     .eq("user_id", userId)
