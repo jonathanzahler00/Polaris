@@ -123,22 +123,25 @@ class PolarisWidget : AppWidgetProvider() {
             tokenManager: TokenManager
         ) {
             CoroutineScope(Dispatchers.IO).launch {
+                val startTime = System.currentTimeMillis()
+                val timestamp = java.text.SimpleDateFormat("HH:mm:ss.SSS", java.util.Locale.US).format(java.util.Date())
+
                 try {
                     val baseUrl = tokenManager.getBaseUrl()
                     val token = tokenManager.getToken()
 
-                    Log.d("PolarisWidget", "Fetching orientation - BaseUrl: $baseUrl, Token: ${token?.take(10)}...")
+                    Log.d("PolarisWidget", "[$timestamp] Starting fetch - BaseUrl: $baseUrl, Token: ${token?.take(10)}...")
 
                     if (token == null) {
-                        Log.e("PolarisWidget", "Token is null!")
+                        Log.e("PolarisWidget", "[$timestamp] ERROR: Token is null!")
                         return@launch
                     }
 
                     val api = PolarisApiClient.create(baseUrl)
                     val response = api.getTodayOrientation(token)
 
-                    Log.d("PolarisWidget", "Response code: ${response.code()}")
-                    Log.d("PolarisWidget", "Response successful: ${response.isSuccessful}")
+                    val elapsed = System.currentTimeMillis() - startTime
+                    Log.d("PolarisWidget", "[$timestamp] Response received in ${elapsed}ms - Code: ${response.code()}, Successful: ${response.isSuccessful}")
 
                     if (response.isSuccessful) {
                         val data = response.body()
@@ -169,7 +172,16 @@ class PolarisWidget : AppWidgetProvider() {
                         }
                     }
                 } catch (e: Exception) {
-                    Log.e("PolarisWidget", "Exception fetching orientation", e)
+                    val elapsed = System.currentTimeMillis() - startTime
+                    val errorType = when (e) {
+                        is java.net.UnknownHostException -> "DNS_LOOKUP_FAILED"
+                        is java.net.SocketTimeoutException -> "TIMEOUT"
+                        is java.net.ConnectException -> "CONNECTION_REFUSED"
+                        is javax.net.ssl.SSLException -> "SSL_ERROR"
+                        else -> e.javaClass.simpleName
+                    }
+
+                    Log.e("PolarisWidget", "[$timestamp] EXCEPTION after ${elapsed}ms - Type: $errorType, Message: ${e.message}", e)
                     e.printStackTrace()
 
                     CoroutineScope(Dispatchers.Main).launch {

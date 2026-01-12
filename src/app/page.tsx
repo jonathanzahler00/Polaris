@@ -34,8 +34,8 @@ export default async function Home() {
     .maybeSingle();
 
   const daysSince = daysSinceSignupInTimezone(profile.created_at, profile.timezone);
-  const placeholder =
-    daysSince < 7 ? PLACEHOLDER_EXAMPLES[daysSince % PLACEHOLDER_EXAMPLES.length] : "";
+  // Always show placeholder examples - rotate through them based on days since signup
+  const placeholder = PLACEHOLDER_EXAMPLES[daysSince % PLACEHOLDER_EXAMPLES.length];
 
   return (
     <TodayClient
