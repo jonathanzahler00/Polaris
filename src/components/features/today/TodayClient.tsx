@@ -111,9 +111,14 @@ export default function TodayClient({ initialLockedText, placeholder }: Props) {
   return (
     <div className="h-screen w-full overflow-hidden relative">
       <div className="mx-auto flex h-full w-full max-w-xl flex-col px-6 py-10">
-        <header className="flex items-center justify-between">
+        <header className="flex flex-col gap-4">
           <div className="text-sm font-medium tracking-wide text-neutral-900">
             Polaris
+          </div>
+          <div className="border-l-2 border-neutral-900 pl-4 text-sm italic leading-relaxed text-neutral-700">
+            Power is earned through clarity, positioning, self-command, and trust.
+            <br />
+            Never force, never deception, never theatrics.
           </div>
         </header>
 
