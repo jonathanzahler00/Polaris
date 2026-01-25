@@ -111,14 +111,9 @@ export default function TodayClient({ initialLockedText, placeholder }: Props) {
   return (
     <div className="h-screen w-full overflow-hidden relative">
       <div className="mx-auto flex h-full w-full max-w-xl flex-col px-6 py-10">
-        <header className="flex flex-col gap-4">
+        <header className="flex items-center justify-between">
           <div className="text-sm font-medium tracking-wide text-neutral-900">
             Polaris
-          </div>
-          <div className="border-l-2 border-neutral-900 pl-4 text-sm italic leading-relaxed text-neutral-700">
-            Power is earned through clarity, positioning, self-command, and trust.
-            <br />
-            Never force, never deception, never theatrics.
           </div>
         </header>
 
@@ -171,6 +166,18 @@ export default function TodayClient({ initialLockedText, placeholder }: Props) {
             </div>
           </main>
         )}
+      </div>
+
+      {/* Power Quote - Bottom Center */}
+      <div className="fixed bottom-6 left-0 right-0 flex justify-center px-6">
+        <div className="text-center text-xs tracking-wide text-neutral-500 max-w-md leading-tight">
+          <div className="font-serif italic">
+            Power is earned through clarity, positioning, self-command, and trust.
+          </div>
+          <div className="font-serif italic mt-1">
+            Never force, never deception, never theatrics.
+          </div>
+        </div>
       </div>
 
       {/* Settings link - small 's' in bottom right */}
