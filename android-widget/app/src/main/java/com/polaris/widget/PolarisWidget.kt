@@ -49,7 +49,7 @@ class PolarisWidget : AppWidgetProvider() {
     }
 
     companion object {
-        private const val UPDATE_INTERVAL_MINUTES = 30L
+        private const val UPDATE_INTERVAL_MINUTES = 5L  // Check every 5 minutes
 
         /**
          * Schedule periodic background updates
@@ -125,12 +125,31 @@ class PolarisWidget : AppWidgetProvider() {
             CoroutineScope(Dispatchers.IO).launch {
                 val startTime = System.currentTimeMillis()
                 val timestamp = java.text.SimpleDateFormat("HH:mm:ss.SSS", java.util.Locale.US).format(java.util.Date())
+                val todayDate = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(java.util.Date())
 
                 try {
+                    // Check if we have valid cached data for today
+                    if (tokenManager.isCacheValidForToday(todayDate)) {
+                        val cachedText = tokenManager.getCachedText() ?: "Not set yet"
+                        val cachedDate = tokenManager.getCachedDate() ?: todayDate
+
+                        Log.d("PolarisWidget", "[$timestamp] Using cached data - Text: $cachedText, Date: $cachedDate (locked)")
+
+                        CoroutineScope(Dispatchers.Main).launch {
+                            views.setTextViewText(R.id.widget_text, cachedText)
+                            views.setTextViewText(R.id.widget_date, cachedDate)
+
+                            val appWidgetManager = AppWidgetManager.getInstance(context)
+                            val component = ComponentName(context, PolarisWidget::class.java)
+                            appWidgetManager.updateAppWidget(component, views)
+                        }
+                        return@launch
+                    }
+
                     val baseUrl = tokenManager.getBaseUrl()
                     val token = tokenManager.getToken()
 
-                    Log.d("PolarisWidget", "[$timestamp] Starting fetch - BaseUrl: $baseUrl, Token: ${token?.take(10)}...")
+                    Log.d("PolarisWidget", "[$timestamp] Fetching from API - BaseUrl: $baseUrl, Token: ${token?.take(10)}...")
 
                     if (token == null) {
                         Log.e("PolarisWidget", "[$timestamp] ERROR: Token is null!")
@@ -146,9 +165,13 @@ class PolarisWidget : AppWidgetProvider() {
                     if (response.isSuccessful) {
                         val data = response.body()
                         val text = data?.text ?: "Not set yet"
-                        val date = data?.date ?: ""
+                        val date = data?.date ?: todayDate
+                        val locked = data?.locked ?: false
 
-                        Log.d("PolarisWidget", "Success - Text: $text, Date: $date")
+                        Log.d("PolarisWidget", "Success - Text: $text, Date: $date, Locked: $locked")
+
+                        // Save to cache
+                        tokenManager.saveCachedOrientation(text, date, locked)
 
                         CoroutineScope(Dispatchers.Main).launch {
                             views.setTextViewText(R.id.widget_text, text)
