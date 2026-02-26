@@ -30,6 +30,7 @@ class MainActivity : AppCompatActivity() {
         val tokenInput = findViewById<TextInputEditText>(R.id.token_input_main)
         val saveButton = findViewById<Button>(R.id.save_button_main)
         val openWebButton = findViewById<Button>(R.id.open_web_button)
+        val testButton = findViewById<Button>(R.id.test_button_main)
         val statusText = findViewById<TextView>(R.id.status_text)
 
         // Show current token status
@@ -58,8 +59,13 @@ class MainActivity : AppCompatActivity() {
 
         openWebButton.setOnClickListener {
             val intent = Intent(Intent.ACTION_VIEW).apply {
-                data = Uri.parse("${tokenManager.getBaseUrl()}/widget")
+                data = Uri.parse("${tokenManager.getBaseUrl()}widget")
             }
+            startActivity(intent)
+        }
+
+        testButton.setOnClickListener {
+            val intent = Intent(this, TestActivity::class.java)
             startActivity(intent)
         }
     }

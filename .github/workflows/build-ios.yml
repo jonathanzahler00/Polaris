@@ -1,0 +1,56 @@
+name: Build iOS App
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: Create web assets directory
+        run: mkdir -p out && echo '<!DOCTYPE html><html><body>Loading...</body></html>' > out/index.html
+
+      - name: Sync Capacitor
+        run: npx cap sync ios
+
+      - name: Build iOS app (no signing)
+        working-directory: ios/App
+        run: |
+          xcodebuild \
+            -workspace App.xcworkspace \
+            -scheme App \
+            -configuration Debug \
+            -sdk iphonesimulator \
+            -destination 'platform=iOS Simulator,name=iPhone 16,OS=latest' \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            build | tail -20
+
+      - name: Archive build result
+        run: |
+          cd ios/App/build/Build/Products/Debug-iphonesimulator || true
+          if [ -d "App.app" ]; then
+            zip -r "$GITHUB_WORKSPACE/polaris-ios-simulator.zip" App.app
+          fi
+
+      - name: Upload iOS build
+        uses: actions/upload-artifact@v4
+        with:
+          name: polaris-ios-simulator
+          path: polaris-ios-simulator.zip
+          if-no-files-found: warn

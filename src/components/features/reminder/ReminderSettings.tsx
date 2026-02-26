@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { initializeReminderScheduler } from "@/lib/utils/reminder-scheduler";
 
 type Props = {
   onTimeSet?: (time: string) => void;
@@ -79,9 +80,11 @@ export function ReminderSettings({ onTimeSet }: Props) {
       try {
         const registration = await navigator.serviceWorker.ready;
 
-        // Store the reminder time and when it was changed
+        // Store the reminder time and when it was changed; start scheduler
         localStorage.setItem("polaris_reminder_time", time);
+        localStorage.setItem("polaris_reminder_enabled", "true");
         localStorage.setItem("polaris_reminder_last_changed", new Date().toISOString());
+        initializeReminderScheduler();
 
         // Set up daily alarm using service worker
         await fetch("/api/reminder/schedule", {

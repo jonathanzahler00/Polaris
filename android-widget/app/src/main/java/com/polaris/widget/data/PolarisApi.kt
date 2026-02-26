@@ -2,6 +2,7 @@ package com.polaris.widget.data
 
 import android.util.Log
 import com.google.gson.annotations.SerializedName
+import com.polaris.widget.BuildConfig
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Response
@@ -11,7 +12,7 @@ import retrofit2.http.GET
 import retrofit2.http.Query
 
 /**
- * API response model
+ * API response model (matches GET /api/widget/today)
  */
 data class OrientationResponse(
     @SerializedName("text")
@@ -21,7 +22,13 @@ data class OrientationResponse(
     val date: String?,
 
     @SerializedName("locked")
-    val locked: Boolean?
+    val locked: Boolean?,
+
+    @SerializedName("timezone")
+    val timezone: String? = null,
+
+    @SerializedName("placeholder")
+    val placeholder: String? = null
 )
 
 /**
@@ -39,17 +46,18 @@ interface PolarisApi {
  */
 object PolarisApiClient {
     fun create(baseUrl: String): PolarisApi {
-        Log.d("PolarisWidget", "Creating API client with baseUrl: $baseUrl")
-
-        val loggingInterceptor = HttpLoggingInterceptor { message ->
-            Log.d("PolarisWidget", "HTTP: $message")
-        }.apply {
-            level = HttpLoggingInterceptor.Level.BODY
+        if (BuildConfig.DEBUG) {
+            Log.d("PolarisWidget", "Creating API client with baseUrl: $baseUrl")
         }
 
-        val client = OkHttpClient.Builder()
-            .addInterceptor(loggingInterceptor)
-            .build()
+        val clientBuilder = OkHttpClient.Builder()
+        if (BuildConfig.DEBUG) {
+            val loggingInterceptor = HttpLoggingInterceptor { message ->
+                Log.d("PolarisWidget", "HTTP: $message")
+            }.apply { level = HttpLoggingInterceptor.Level.BODY }
+            clientBuilder.addInterceptor(loggingInterceptor)
+        }
+        val client = clientBuilder.build()
 
         val retrofit = Retrofit.Builder()
             .baseUrl(baseUrl)

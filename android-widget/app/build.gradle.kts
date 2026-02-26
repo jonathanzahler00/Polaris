@@ -11,23 +11,36 @@ android {
         applicationId = "com.polaris.widget"
         minSdk = 26
         targetSdk = 34
-        versionCode = 11
-        versionName = "1.6.0"
+        versionCode = 12
+        versionName = "1.7.0"
+
+        // Default Polaris API base URL (must end with / for Retrofit)
+        buildConfigField("String", "DEFAULT_BASE_URL", "\"https://polarisapp.vercel.app/\"")
     }
 
     signingConfigs {
         create("release") {
-            storeFile = file("../polaris-widget.keystore")
-            storePassword = "***REMOVED***"
-            keyAlias = "polaris"
-            keyPassword = "***REMOVED***"
+            val keystorePath = project.findProperty("POLARIS_KEYSTORE_PATH") as String? ?: "../polaris-widget.keystore"
+            val keystorePass = project.findProperty("POLARIS_KEYSTORE_PASSWORD") as String? ?: ""
+            val keyAliasName = project.findProperty("POLARIS_KEY_ALIAS") as String? ?: "polaris"
+            val keyPass = project.findProperty("POLARIS_KEY_PASSWORD") as String? ?: keystorePass
+            if (file(keystorePath).exists() && keystorePass.isNotEmpty()) {
+                storeFile = file(keystorePath)
+                storePassword = keystorePass
+                keyAlias = keyAliasName
+                keyPassword = keyPass
+            }
         }
     }
 
     buildTypes {
         release {
             isMinifyEnabled = false
-            signingConfig = signingConfigs.getByName("release")
+            signingConfig = if (signingConfigs.getByName("release").storeFile?.exists() == true) {
+                signingConfigs.getByName("release")
+            } else {
+                signingConfigs.getByName("debug")
+            }
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -46,6 +59,7 @@ android {
 
     buildFeatures {
         viewBinding = true
+        buildConfig = true
     }
 }
 

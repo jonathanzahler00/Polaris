@@ -43,5 +43,11 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- Test/Debug Activity -->
+        <activity
+            android:name=".TestActivity"
+            android:exported="false"
+            android:label="Connection Test" />
     </application>
 </manifest>

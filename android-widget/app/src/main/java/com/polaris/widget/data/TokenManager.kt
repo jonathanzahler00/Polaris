@@ -2,9 +2,10 @@ package com.polaris.widget.data
 
 import android.content.Context
 import android.content.SharedPreferences
+import com.polaris.widget.BuildConfig
 
 /**
- * Manages widget token storage in SharedPreferences
+ * Manages widget token and base URL storage in SharedPreferences
  */
 class TokenManager(context: Context) {
     private val prefs: SharedPreferences = context.getSharedPreferences(
@@ -15,7 +16,6 @@ class TokenManager(context: Context) {
     companion object {
         private const val KEY_TOKEN = "widget_token"
         private const val KEY_BASE_URL = "base_url"
-        private const val DEFAULT_BASE_URL = "https://polarisapp.vercel.app/"
         private const val KEY_CACHED_TEXT = "cached_text"
         private const val KEY_CACHED_DATE = "cached_date"
         private const val KEY_CACHED_LOCKED = "cached_locked"
@@ -39,7 +39,10 @@ class TokenManager(context: Context) {
     }
 
     fun getBaseUrl(): String {
-        return prefs.getString(KEY_BASE_URL, DEFAULT_BASE_URL) ?: DEFAULT_BASE_URL
+        val defaultUrl = BuildConfig.DEFAULT_BASE_URL
+        val saved = prefs.getString(KEY_BASE_URL, null)
+        val url = if (!saved.isNullOrBlank()) saved else defaultUrl
+        return if (url.endsWith("/")) url else "$url/"
     }
 
     fun saveBaseUrl(url: String) {

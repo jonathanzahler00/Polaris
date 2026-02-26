@@ -6,6 +6,10 @@
 export function initializeReminderScheduler() {
   if (typeof window === "undefined") return;
 
+  const savedTime = localStorage.getItem("polaris_reminder_time");
+  const enabled = localStorage.getItem("polaris_reminder_enabled") === "true";
+  if (!savedTime && !enabled) return;
+
   // Clear any existing interval
   const existingInterval = localStorage.getItem("polaris_check_interval_id");
   if (existingInterval) {
@@ -59,12 +63,12 @@ async function showReminderNotification() {
   }
 }
 
-// Start scheduler immediately
+// Start scheduler on page load only if user has ever set a reminder
 if (typeof window !== "undefined") {
-  // Initialize on page load
+  const run = () => initializeReminderScheduler();
   if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", initializeReminderScheduler);
+    document.addEventListener("DOMContentLoaded", run);
   } else {
-    initializeReminderScheduler();
+    run();
   }
 }

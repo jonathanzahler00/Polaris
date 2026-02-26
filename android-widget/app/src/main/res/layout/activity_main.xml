@@ -68,6 +68,15 @@
         android:textSize="14sp"
         style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
 
+    <Button
+        android:id="@+id/test_button_main"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="Test Connection"
+        android:textSize="14sp"
+        style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
+
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"

@@ -1,153 +1,82 @@
 # Polaris Android Widget
 
-Native Android home screen widget for displaying your daily orientation.
+Home screen widget that shows your daily orientation from the Polaris app.
 
-## Overview
+## Requirements
 
-This is a lightweight Android app that provides a single feature: a home screen widget displaying today's orientation from your Polaris account.
+- Android Studio (Ladybug or newer recommended)
+- **JDK 17** – Gradle/Kotlin do not support Java 21+ (e.g. Java 25) yet. Use JDK 17 to run the build.
+- Android SDK 26+ (min), 34 (target)
 
-## Features
+### If you see "IllegalArgumentException: 25" or "What went wrong: 25"
 
-- 📱 Native Android home screen widget
-- 🔄 Auto-updates every 30-60 minutes
-- 🔒 Secure token-based authentication
-- 📦 Minimal size (~2MB APK)
-- 🎨 Clean, readable design matching Polaris aesthetic
+Your system is using Java 25 (or another very new JDK). Gradle must run with **JDK 17**:
 
-## Architecture
+- **Windows (PowerShell):**  
+  `$env:JAVA_HOME = "C:\Program Files\Java\jdk-17"`  
+  (Adjust path if JDK 17 is installed elsewhere, e.g. `C:\Program Files\Eclipse Adoptium\jdk-17*`.)
 
-```
-Android Widget App
-    ↓ (HTTP GET with token)
-Polaris API (/api/widget/today)
-    ↓
-Supabase Database
-```
+- **macOS/Linux:**  
+  `export JAVA_HOME=$(/usr/libexec/java_home -v 17)`  
+  or point `JAVA_HOME` to your JDK 17 install.
 
-**No direct Supabase access** - the widget simply fetches from your existing API endpoint.
+Then run `./gradlew assembleDebug` again.
 
-## Tech Stack
+## Build
 
-- **Language:** Kotlin
-- **Min SDK:** 26 (Android 8.0+)
-- **Target SDK:** 34 (Android 14)
-- **Key Components:**
-  - `AppWidgetProvider` - Widget lifecycle
-  - `WorkManager` - Background updates
-  - `Retrofit` - API calls
-  - `SharedPreferences` - Token storage
-
-## Project Structure
-
-```
-app/src/main/
-├── java/com/polaris/widget/
-│   ├── PolarisWidget.kt          # AppWidgetProvider
-│   ├── PolarisWidgetService.kt   # Fetches data from API
-│   ├── WidgetConfigActivity.kt   # Token setup screen
-│   ├── data/
-│   │   ├── PolarisApi.kt         # API interface
-│   │   └── TokenManager.kt       # SharedPreferences wrapper
-│   └── workers/
-│       └── WidgetUpdateWorker.kt # Background refresh
-├── res/
-│   ├── layout/
-│   │   ├── widget_layout.xml     # Widget appearance
-│   │   └── activity_config.xml   # Config screen
-│   └── xml/
-│       └── widget_info.xml       # Widget metadata
-└── AndroidManifest.xml
-```
-
-## Build Instructions
-
-### Prerequisites
-
-- Android Studio (latest stable)
-- JDK 17+
-- Android SDK 34
-
-### Steps
-
-1. Open Android Studio
-2. File → Open → Select `android-widget` folder
-3. Let Gradle sync
-4. Build → Generate Signed Bundle/APK
-5. Create/use signing key
-6. Generate release APK
-
-### For Development
+### Debug (no keystore)
 
 ```bash
+cd android-widget
 ./gradlew assembleDebug
-adb install app/build/outputs/apk/debug/app-debug.apk
 ```
 
-## User Setup Flow
+APK: `app/build/outputs/apk/debug/app-debug.apk`
 
-1. Install APK on Android device
-2. Long-press home screen → Widgets
-3. Find "Polaris" widget, drag to home screen
-4. Configuration screen opens automatically
-5. Paste widget token from https://polaris.vercel.app/widget
-6. Tap "Save"
-7. Widget appears with current orientation
+### Release (signed)
 
-## Widget Behavior
+1. Create a keystore (once):
 
-- **On add:** Shows "Tap to configure" until token is set
-- **After config:** Fetches orientation immediately
-- **Updates:** Every 30 minutes automatically
-- **On tap:** Opens Polaris web app
-- **No data:** Shows "Not set yet"
+   ```bash
+   keytool -genkey -v -keystore polaris-widget.keystore -alias polaris -keyalg RSA -keysize 2048 -validity 10000
+   ```
 
-## API Integration
+2. Either place `polaris-widget.keystore` in `android-widget/` and set passwords in `gradle.properties` (do not commit):
 
-Calls: `GET /api/widget/today?token={USER_TOKEN}`
+   ```properties
+   POLARIS_KEYSTORE_PATH=../polaris-widget.keystore
+   POLARIS_KEYSTORE_PASSWORD=your_keystore_password
+   POLARIS_KEY_ALIAS=polaris
+   POLARIS_KEY_PASSWORD=your_key_password
+   ```
 
-Expected response:
-```json
-{
-  "text": "Focus on what matters most",
-  "date": "2026-01-04",
-  "locked": false
-}
-```
+   Or leave the sample values in `app/build.gradle.kts` only for local builds (never commit real passwords).
 
-Widget displays the `text` field.
+3. Build release:
 
-## Distribution
+   ```bash
+   ./gradlew assembleRelease
+   ```
 
-### Option 1: Direct APK (Immediate)
-- Build signed release APK
-- Host on GitHub Releases
-- Link from Polaris web app
+APK: `app/build/outputs/apk/release/app-release.apk`
 
-### Option 2: Google Play (Later)
-- Better distribution and updates
-- Requires Google Play Console account ($25 one-time)
-- 1-2 day review process
+## Setup (users)
 
-## Roadmap
+1. Install the APK.
+2. Add the Polaris widget to the home screen (long-press → Widgets → Polaris).
+3. When prompted, open [polarisapp.vercel.app](https://polarisapp.vercel.app), sign in, go to **Widget**, and generate/copy your token.
+4. Paste the token in the widget config and tap **Save**. Optionally set a custom server URL if you self-host Polaris.
 
-- [ ] Basic widget with text display
-- [ ] Token configuration screen
-- [ ] Auto-refresh every 30 min
-- [ ] Tap widget → open Polaris web app
-- [ ] Material Design 3 styling
-- [ ] Dark mode support
-- [ ] Multiple widget sizes
-- [ ] Offline caching
-- [ ] Google Play release
+The widget refreshes periodically and on tap; tap also opens the Polaris web app.
 
-## Development Timeline
+## Project structure
 
-- **Day 1:** Project setup, basic widget layout
-- **Day 2:** API integration, token management
-- **Day 3:** Background updates, configuration UI
-- **Day 4:** Polish, testing, APK build
-- **Day 5:** Documentation, release
+- `app/src/main/java/com/polaris/widget/` – widget provider, config activity
+- `app/src/main/java/com/polaris/widget/data/` – API client, token/cache storage
+- `app/src/main/java/com/polaris/widget/workers/` – WorkManager periodic update
+- `app/src/main/res/layout/` – widget and config UI
+- `app/src/main/res/xml/widget_info.xml` – widget metadata (size, update interval)
 
-## License
+## Version
 
-Same as Polaris main project
+- **versionCode** / **versionName** in `app/build.gradle.kts` (currently 12 / 1.7.0).

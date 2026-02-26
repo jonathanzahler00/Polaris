@@ -1,8 +1,17 @@
 "use client";
 
 import { useCallback, useMemo, useState, useEffect } from "react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
-import { ReminderPromptModal } from "@/components/features/reminder/ReminderPromptModal";
+import { initializeReminderScheduler } from "@/lib/utils/reminder-scheduler";
+
+const ReminderPromptModal = dynamic(
+  () =>
+    import("@/components/features/reminder/ReminderPromptModal").then((m) => ({
+      default: m.ReminderPromptModal,
+    })),
+  { ssr: false }
+);
 
 type Props = {
   initialLockedText: string | null;
@@ -56,9 +65,11 @@ export default function TodayClient({ initialLockedText, placeholder }: Props) {
     setShowReminderPrompt(false);
 
     if (selectedTime) {
-      // Save the reminder time
+      // Save the reminder time and enable scheduler
       localStorage.setItem("polaris_reminder_time", selectedTime);
+      localStorage.setItem("polaris_reminder_enabled", "true");
       localStorage.setItem("polaris_reminder_last_changed", new Date().toISOString());
+      initializeReminderScheduler();
 
       // Schedule via API
       try {

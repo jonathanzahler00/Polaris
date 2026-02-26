@@ -42,16 +42,22 @@ class WidgetConfigActivity : AppCompatActivity() {
     }
 
     private fun setupViews() {
+        val baseUrlInput = findViewById<TextInputEditText>(R.id.base_url_input)
         val tokenInput = findViewById<TextInputEditText>(R.id.token_input)
         val saveButton = findViewById<Button>(R.id.save_button)
 
-        // Pre-fill if token exists
+        // Pre-fill existing values
+        val existingBaseUrl = tokenManager.getBaseUrl().trimEnd('/')
+        if (existingBaseUrl.isNotEmpty()) {
+            baseUrlInput.setText(existingBaseUrl)
+        }
         val existingToken = tokenManager.getToken()
         if (existingToken != null) {
             tokenInput.setText(existingToken)
         }
 
         saveButton.setOnClickListener {
+            val baseUrl = baseUrlInput.text?.toString()?.trim()
             val token = tokenInput.text?.toString()?.trim()
 
             if (token.isNullOrBlank()) {
@@ -59,7 +65,9 @@ class WidgetConfigActivity : AppCompatActivity() {
                 return@setOnClickListener
             }
 
-            // Save token
+            if (!baseUrl.isNullOrBlank()) {
+                tokenManager.saveBaseUrl(if (baseUrl.endsWith("/")) baseUrl else "$baseUrl/")
+            }
             tokenManager.saveToken(token)
 
             // Update widget immediately

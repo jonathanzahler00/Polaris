@@ -46,6 +46,7 @@ DEPLOYMENT.md
 FEATURES.md
 WIDGETS.md
 STRUCTURE.md
+STORE_RELEASE.md
 
 # database schema (keep private)
 supabase/
@@ -53,3 +54,10 @@ supabase/
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Capacitor native build artifacts
+android/app/build/
+android/.gradle/
+android/local.properties
+ios/App/Pods/
+ios/DerivedData/
