@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
-import { getLocalDateISO } from "@/lib/utils/date";
+import { getLocalDateISO, normalizeTimeToHHmm } from "@/lib/utils/date";
 import { safeError } from "@/lib/utils/errors";
 import { getProfileForUser, ensureProfileExists } from "@/lib/services/profile";
 
@@ -124,13 +124,18 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Widget-friendly response
+    // Widget-friendly response (reminder_time only when notifications enabled, for cache invalidation at reset time)
+    const reminderTime =
+      profile.notifications_enabled && profile.notification_time
+        ? normalizeTimeToHHmm(String(profile.notification_time))
+        : null;
     return NextResponse.json({
       text: orientation?.text || null,
       date: today,
       locked: !!orientation?.locked_at,
       timezone: profile.timezone,
       placeholder: orientation ? null : "Not set yet",
+      ...(reminderTime && { reminder_time: reminderTime }),
     }, {
       headers: {
         // Allow CORS for widget apps (they may use webview)

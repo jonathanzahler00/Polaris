@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { randomBytes } from "crypto";
 
+import { getAuthUser } from "@/lib/services/auth";
 import { safeError } from "@/lib/utils/errors";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -14,16 +15,10 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 // Generate a new widget token
 export async function POST() {
   try {
+    const user = await getAuthUser();
+    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
     const supabase = await createSupabaseServerClient();
-
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
 
     // Generate a secure random token
     const token = randomBytes(32).toString("hex");
@@ -50,16 +45,10 @@ export async function POST() {
 // Revoke widget token
 export async function DELETE() {
   try {
+    const user = await getAuthUser();
+    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
     const supabase = await createSupabaseServerClient();
-
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
 
     // Remove token from user metadata
     const { error: updateError } = await supabase.auth.updateUser({
@@ -84,17 +73,10 @@ export async function DELETE() {
 export async function GET() {
   try {
     const supabase = await createSupabaseServerClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const token = user.user_metadata?.widget_token || null;
+    const token = user.user_metadata?.widget_token ?? null;
 
     return NextResponse.json({ token, exists: !!token });
   } catch (error) {

@@ -170,8 +170,14 @@ class PolarisWidget : AppWidgetProvider() {
 
                         Log.d("PolarisWidget", "Success - Text: $text, Date: $date, Locked: $locked")
 
-                        // Save to cache
-                        tokenManager.saveCachedOrientation(text, date, locked)
+                        // Save to cache (include reminder_time and timezone so cache invalidates after reminder time)
+                        tokenManager.saveCachedOrientation(
+                            text,
+                            date,
+                            locked,
+                            data?.reminderTime,
+                            data?.timezone
+                        )
 
                         CoroutineScope(Dispatchers.Main).launch {
                             views.setTextViewText(R.id.widget_text, text)

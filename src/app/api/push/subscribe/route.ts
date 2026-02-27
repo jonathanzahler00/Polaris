@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { getAuthUser } from "@/lib/services/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 type Body = {
@@ -9,12 +10,10 @@ type Body = {
 };
 
 export async function POST(request: Request) {
-  const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
+  const user = await getAuthUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const supabase = await createSupabaseServerClient();
 
   const body = (await request.json()) as Partial<Body>;
   if (

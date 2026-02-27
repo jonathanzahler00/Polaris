@@ -1,7 +1,16 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { LogoutButton } from "@/components/layout/LogoutButton";
+
+const ReminderSettings = dynamic(
+  () =>
+    import("@/components/features/reminder/ReminderSettings").then((m) => ({
+      default: m.ReminderSettings,
+    })),
+  { ssr: false }
+);
 
 export default function SettingsClient() {
   return (
@@ -34,6 +43,8 @@ export default function SettingsClient() {
               Set Up Widget
             </Link>
           </div>
+
+          <ReminderSettings />
         </main>
       </div>
     </div>

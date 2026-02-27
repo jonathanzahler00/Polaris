@@ -94,13 +94,19 @@ export default function TodayClient({ initialLockedText, placeholder }: Props) {
 
   const lockToday = useCallback(async () => {
     if (!canLock) return;
+    const textToLock = text.trim();
     setIsSubmitting(true);
     setJustLocked(false);
+
+    // Optimistic update: show locked state immediately
+    setLockedText(textToLock);
+    setShowBlockingModal(false);
+
     try {
       const res = await fetch("/api/today/lock", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ text: text.trim() }),
+        body: JSON.stringify({ text: textToLock }),
       });
 
       if (res.status === 409) {
@@ -108,16 +114,22 @@ export default function TodayClient({ initialLockedText, placeholder }: Props) {
         return;
       }
 
-      if (!res.ok) return;
+      if (!res.ok) {
+        setLockedText(initialLockedText);
+        setJustLocked(false);
+        return;
+      }
 
       const data = (await res.json()) as { text: string };
       setLockedText(data.text);
       setJustLocked(true);
-      setShowBlockingModal(false);
+    } catch {
+      setLockedText(initialLockedText);
+      setJustLocked(false);
     } finally {
       setIsSubmitting(false);
     }
-  }, [canLock, text]);
+  }, [canLock, text, initialLockedText]);
 
   return (
     <div className="h-screen w-full overflow-hidden relative">

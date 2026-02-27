@@ -28,7 +28,10 @@ data class OrientationResponse(
     val timezone: String? = null,
 
     @SerializedName("placeholder")
-    val placeholder: String? = null
+    val placeholder: String? = null,
+
+    @SerializedName("reminder_time")
+    val reminderTime: String? = null  // "HH:mm" - when set, widget invalidates cache after this time today
 )
 
 /**

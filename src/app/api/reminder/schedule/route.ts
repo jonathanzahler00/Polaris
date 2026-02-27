@@ -1,16 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
+
+import { getAuthUser } from "@/lib/services/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createSupabaseServerClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    const user = await getAuthUser();
+    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const supabase = await createSupabaseServerClient();
 
     const { time } = await request.json();
 
@@ -33,6 +32,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
+    // Sync to profile so cron can reset widget and send push at this time
+    const admin = createSupabaseAdminClient();
+    await admin
+      .from("profiles")
+      .update({
+        notification_time: time,
+        notifications_enabled: true,
+      })
+      .eq("user_id", user.id);
+
     return NextResponse.json({ success: true, time });
   } catch (error) {
     console.error("Error scheduling reminder:", error);
@@ -46,13 +55,8 @@ export async function POST(request: NextRequest) {
 export async function GET() {
   try {
     const supabase = await createSupabaseServerClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const reminderTime = user.user_metadata?.reminder_time;
     const reminderEnabled = user.user_metadata?.reminder_enabled ?? false;
@@ -72,14 +76,10 @@ export async function GET() {
 
 export async function DELETE() {
   try {
-    const supabase = await createSupabaseServerClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    const user = await getAuthUser();
+    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const supabase = await createSupabaseServerClient();
 
     const { error } = await supabase.auth.updateUser({
       data: {
@@ -90,6 +90,13 @@ export async function DELETE() {
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
+
+    // Stop cron from clearing widget / sending push
+    const admin = createSupabaseAdminClient();
+    await admin
+      .from("profiles")
+      .update({ notifications_enabled: false })
+      .eq("user_id", user.id);
 
     return NextResponse.json({ success: true });
   } catch (error) {

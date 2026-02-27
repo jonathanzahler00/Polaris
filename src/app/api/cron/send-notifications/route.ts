@@ -60,6 +60,13 @@ export async function GET(request: Request) {
 
     considered += 1;
 
+    // Reset widget to blank at reminder time: clear today's orientation so widget shows "Not set yet"
+    await admin
+      .from("daily_orientations")
+      .delete()
+      .eq("user_id", profile.user_id)
+      .eq("date", today);
+
     const { data: subsData, error: subsError } = await admin
       .from("push_subscriptions")
       .select("id,endpoint,p256dh,auth,is_active")
