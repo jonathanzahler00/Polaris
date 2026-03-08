@@ -75,10 +75,10 @@ export function ReminderSettings({ onTimeSet }: Props) {
   const scheduleNotification = async (time: string) => {
     if (!time) return;
 
-    // Register service worker for notifications
     if ("serviceWorker" in navigator) {
       try {
-        const registration = await navigator.serviceWorker.ready;
+        // Ensure service worker is registered so device notifications work at the chosen time
+        await navigator.serviceWorker.register("/sw.js", { scope: "/" }).then(() => navigator.serviceWorker.ready);
 
         // Store the reminder time and when it was changed; start scheduler
         localStorage.setItem("polaris_reminder_time", time);

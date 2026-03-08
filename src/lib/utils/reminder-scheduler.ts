@@ -8,7 +8,9 @@ export function initializeReminderScheduler() {
 
   const savedTime = localStorage.getItem("polaris_reminder_time");
   const enabled = localStorage.getItem("polaris_reminder_enabled") === "true";
-  if (!savedTime && !enabled) return;
+
+  // Only run when user has set a time and enabled reminders
+  if (!savedTime || !enabled) return;
 
   // Clear any existing interval
   const existingInterval = localStorage.getItem("polaris_check_interval_id");
@@ -32,6 +34,10 @@ export function initializeReminderScheduler() {
     if (currentTime === savedTime && lastShown !== today) {
       await showReminderNotification();
       localStorage.setItem("polaris_last_notification", today);
+      // When app is in foreground, also show in-app modal
+      if (document.hasFocus()) {
+        window.location.href = "/?alarm=true";
+      }
     }
   }, 60000); // Check every minute
 

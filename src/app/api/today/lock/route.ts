@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { getTodayForAuthedUser } from "@/lib/services/today";
+import { hasRecordedClipForMonth } from "@/lib/services/month-clip";
 
 type Body = { text: string };
 
@@ -22,7 +23,15 @@ export async function POST(request: Request) {
   }
 
   try {
-    const { supabase, user, today } = await getTodayForAuthedUser();
+    const { supabase, user, today, profile } = await getTodayForAuthedUser();
+
+    const hasMonthClip = await hasRecordedClipForMonth(user.id, profile.timezone);
+    if (!hasMonthClip) {
+      return NextResponse.json(
+        { error: "month_clip_required", code: "MONTH_CLIP_REQUIRED" },
+        { status: 403 },
+      );
+    }
 
     const { data, error } = await supabase
       .from("daily_orientations")

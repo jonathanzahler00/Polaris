@@ -1,6 +1,7 @@
 import { daysSinceSignupInTimezone, getLocalDateISO } from "@/lib/utils/date";
 import { getSessionWithProfile } from "@/lib/services/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { hasRecordedClipForMonth } from "@/lib/services/month-clip";
 import TodayClient from "@/components/features/today/TodayClient";
 
 const PLACEHOLDER_EXAMPLES = [
@@ -22,6 +23,7 @@ export default async function Home() {
     .eq("date", today)
     .maybeSingle();
 
+  const hasRecordedThisMonth = await hasRecordedClipForMonth(user.id, profile.timezone);
   const daysSince = daysSinceSignupInTimezone(profile.created_at, profile.timezone);
   const placeholder = PLACEHOLDER_EXAMPLES[daysSince % PLACEHOLDER_EXAMPLES.length];
 
@@ -29,6 +31,7 @@ export default async function Home() {
     <TodayClient
       initialLockedText={orientation?.text ?? null}
       placeholder={placeholder}
+      hasRecordedMonthClip={hasRecordedThisMonth}
     />
   );
 }

@@ -16,9 +16,14 @@ const ReminderPromptModal = dynamic(
 type Props = {
   initialLockedText: string | null;
   placeholder: string;
+  hasRecordedMonthClip: boolean;
 };
 
-export default function TodayClient({ initialLockedText, placeholder }: Props) {
+export default function TodayClient({
+  initialLockedText,
+  placeholder,
+  hasRecordedMonthClip,
+}: Props) {
   const [lockedText, setLockedText] = useState<string | null>(initialLockedText);
   const [text, setText] = useState("");
   const [isFocused, setIsFocused] = useState(false);
@@ -26,6 +31,8 @@ export default function TodayClient({ initialLockedText, placeholder }: Props) {
   const [justLocked, setJustLocked] = useState(false);
   const [showReminderPrompt, setShowReminderPrompt] = useState(false);
   const [showBlockingModal, setShowBlockingModal] = useState(false);
+
+  const requireMonthClipFirst = !hasRecordedMonthClip;
 
   // Check if we should show blocking modal (from notification click)
   useEffect(() => {
@@ -88,9 +95,10 @@ export default function TodayClient({ initialLockedText, placeholder }: Props) {
   };
 
   const canLock = useMemo(() => {
+    if (requireMonthClipFirst) return false;
     const len = text.trim().length;
     return len >= 1 && len <= 100 && !isSubmitting;
-  }, [text, isSubmitting]);
+  }, [text, isSubmitting, requireMonthClipFirst]);
 
   const lockToday = useCallback(async () => {
     if (!canLock) return;
@@ -112,6 +120,14 @@ export default function TodayClient({ initialLockedText, placeholder }: Props) {
       if (res.status === 409) {
         window.location.reload();
         return;
+      }
+
+      if (res.status === 403) {
+        const data = await res.json().catch(() => ({}));
+        if (data?.code === "MONTH_CLIP_REQUIRED") {
+          window.location.href = "/month";
+          return;
+        }
       }
 
       if (!res.ok) {
@@ -150,6 +166,23 @@ export default function TodayClient({ initialLockedText, placeholder }: Props) {
                 {lockedText}
               </div>
             </div>
+          </main>
+        ) : requireMonthClipFirst ? (
+          <main className="flex flex-1 flex-col justify-center gap-6">
+            <div className="text-center space-y-2">
+              <div className="text-xl font-medium leading-snug text-neutral-900">
+                Record your month clip first
+              </div>
+              <p className="text-sm text-neutral-500 max-w-sm mx-auto">
+                A short reflection on the past month and the month ahead unlocks your daily lock.
+              </p>
+            </div>
+            <Link
+              href="/month"
+              className="h-12 w-full rounded-lg bg-neutral-900 text-sm font-medium text-white shadow-sm transition-colors hover:bg-neutral-800 flex items-center justify-center"
+            >
+              Record month clip
+            </Link>
           </main>
         ) : (
           <main className="flex flex-1 flex-col justify-center gap-6">
@@ -191,25 +224,40 @@ export default function TodayClient({ initialLockedText, placeholder }: Props) {
         )}
       </div>
 
-      {/* Power Quote - Bottom Center */}
-      <div className="fixed bottom-6 left-0 right-0 flex justify-center px-6">
-        <div className="text-center text-xs tracking-wide text-neutral-500 max-w-md leading-tight">
+      {/* Power Quote - Bottom Center, quote block */}
+      <div className="fixed bottom-20 left-0 right-0 flex justify-center px-6">
+        <blockquote className="text-center text-xs tracking-wide text-neutral-500 max-w-md leading-tight border-l-2 border-neutral-300 pl-4 py-1 my-0">
           <div className="font-serif italic">
             Power is earned through clarity, positioning, self-command, and trust.
           </div>
           <div className="font-serif italic mt-1">
             Never force, never deception, never theatrics.
           </div>
-        </div>
+        </blockquote>
       </div>
 
-      {/* Settings link - small 's' in bottom right */}
+      {/* Settings - cog icon bottom right */}
       <Link
         href="/settings"
-        className="fixed bottom-6 right-6 w-8 h-8 rounded-full bg-neutral-200 hover:bg-neutral-300 flex items-center justify-center text-neutral-600 hover:text-neutral-900 text-sm font-medium transition-colors"
+        className="fixed bottom-6 right-6 w-8 h-8 rounded-full bg-neutral-200 hover:bg-neutral-300 flex items-center justify-center text-neutral-600 hover:text-neutral-900 transition-colors"
         title="Settings"
+        aria-label="Settings"
       >
-        s
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="18"
+          height="18"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden
+        >
+          <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" />
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1Z" />
+        </svg>
       </Link>
 
       {/* Monthly Reminder Prompt Modal */}

@@ -27,3 +27,8 @@ export function daysSinceSignupInTimezone(
   return Math.max(0, Math.floor(today.diff(signupDay, "days").days));
 }
 
+/** Current month in user's timezone as YYYY-MM for monthly clip key. */
+export function getLocalMonthKey(timezone: string, now = DateTime.now()): string {
+  return now.setZone(timezone).toFormat("yyyy-MM");
+}
+
