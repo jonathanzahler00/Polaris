@@ -22,6 +22,7 @@ export default function MonthRecordClient({
   currentMonthLabel,
   hasRecordedThisMonth,
 }: Props) {
+  const [mediaType, setMediaType] = useState<"audio" | "video">("audio");
   const [status, setStatus] = useState<"idle" | "recording" | "stopped" | "uploading" | "done">(
     "idle",
   );
@@ -29,6 +30,7 @@ export default function MonthRecordClient({
   const [error, setError] = useState<string | null>(null);
   const [blob, setBlob] = useState<Blob | null>(null);
   const [playbackUrl, setPlaybackUrl] = useState<string | null>(null);
+  const [playbackMediaType, setPlaybackMediaType] = useState<"audio" | "video">("audio");
   const [playbackLoading, setPlaybackLoading] = useState(false);
   const streamRef = useRef<MediaStream | null>(null);
   const recorderRef = useRef<MediaRecorder | null>(null);
@@ -56,11 +58,18 @@ export default function MonthRecordClient({
     setBlob(null);
     chunksRef.current = [];
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const isVideo = mediaType === "video";
+      const stream = await navigator.mediaDevices.getUserMedia(
+        isVideo ? { video: true, audio: true } : { audio: true },
+      );
       streamRef.current = stream;
-      const mime = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
-        ? "audio/webm;codecs=opus"
-        : "audio/webm";
+      const mime = isVideo
+        ? (MediaRecorder.isTypeSupported("video/webm;codecs=vp9,opus")
+            ? "video/webm;codecs=vp9,opus"
+            : "video/webm")
+        : MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
+          ? "audio/webm;codecs=opus"
+          : "audio/webm";
       const recorder = new MediaRecorder(stream);
       recorderRef.current = recorder;
       recorder.ondataavailable = (e) => {
@@ -84,10 +93,14 @@ export default function MonthRecordClient({
         });
       }, 1000);
     } catch (err) {
-      setError("Microphone access is needed to record.");
+      setError(
+        mediaType === "video"
+          ? "Camera and microphone access are needed to record."
+          : "Microphone access is needed to record.",
+      );
       setStatus("idle");
     }
-  }, [stopRecording]);
+  }, [stopRecording, mediaType]);
 
   useEffect(() => {
     return () => {
@@ -100,8 +113,9 @@ export default function MonthRecordClient({
     setStatus("uploading");
     setError(null);
     const form = new FormData();
-    form.append("audio", blob);
+    form.append("clip", blob);
     form.append("duration_seconds", String(seconds));
+    form.append("media_type", mediaType);
     const res = await fetch("/api/month/record", { method: "POST", body: form });
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
@@ -111,7 +125,7 @@ export default function MonthRecordClient({
     }
     setStatus("done");
     window.location.href = "/";
-  }, [blob, seconds]);
+  }, [blob, seconds, mediaType]);
 
   const loadPlayback = useCallback(async () => {
     setPlaybackLoading(true);
@@ -123,8 +137,9 @@ export default function MonthRecordClient({
         setError(res.status === 404 ? "No clip found." : "Could not load clip.");
         return;
       }
-      const data = (await res.json()) as { url: string };
+      const data = (await res.json()) as { url: string; media_type?: "audio" | "video" };
       setPlaybackUrl(data.url);
+      setPlaybackMediaType(data.media_type ?? "audio");
     } catch {
       setError("Could not load clip.");
     } finally {
@@ -148,9 +163,18 @@ export default function MonthRecordClient({
         <div className="space-y-2">
           <h1 className="text-2xl font-medium text-neutral-900">Month clip</h1>
           <p className="text-sm text-neutral-500">
-            Up to 60 seconds: what you gained or lost last month, and where you see yourself going
-            this month.
+            Up to 60 seconds: look back, then look ahead.
           </p>
+        </div>
+
+        {/* Brief prompts to think before recording */}
+        <div className="rounded-lg border border-neutral-200 bg-neutral-50/50 px-4 py-3 space-y-1.5">
+          <p className="text-xs font-medium text-neutral-500 uppercase tracking-wide">Think about</p>
+          <ul className="text-sm text-neutral-600 space-y-1 list-none">
+            <li>· What did you gain or lose last month?</li>
+            <li>· Where do you want to be by the end of this month?</li>
+            <li>· What will you let go of? What will you lean into?</li>
+          </ul>
         </div>
 
         {error && (
@@ -159,13 +183,43 @@ export default function MonthRecordClient({
 
         {status === "idle" && (
           <div className="space-y-4">
+            {/* Audio / Video selector */}
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setMediaType("audio")}
+                className={`flex-1 h-10 rounded-lg border text-sm font-medium transition-colors ${
+                  mediaType === "audio"
+                    ? "border-neutral-900 bg-neutral-900 text-white"
+                    : "border-neutral-300 text-neutral-600 hover:bg-neutral-50"
+                }`}
+              >
+                Audio
+              </button>
+              <button
+                type="button"
+                onClick={() => setMediaType("video")}
+                className={`flex-1 h-10 rounded-lg border text-sm font-medium transition-colors ${
+                  mediaType === "video"
+                    ? "border-neutral-900 bg-neutral-900 text-white"
+                    : "border-neutral-300 text-neutral-600 hover:bg-neutral-50"
+                }`}
+              >
+                Video
+              </button>
+            </div>
+
             {hasRecordedThisMonth && (
               <div className="rounded-lg border border-neutral-200 bg-white p-4 space-y-3">
                 <p className="text-sm font-medium text-neutral-900">
                   Recorded for {currentMonthLabel}
                 </p>
                 {playbackUrl ? (
-                  <audio src={playbackUrl} controls className="w-full" />
+                  playbackMediaType === "video" ? (
+                    <video src={playbackUrl} controls className="w-full rounded-lg" />
+                  ) : (
+                    <audio src={playbackUrl} controls className="w-full" />
+                  )
                 ) : (
                   <button
                     type="button"
@@ -215,9 +269,13 @@ export default function MonthRecordClient({
         {(status === "stopped" || status === "uploading") && blob && (
           <div className="space-y-4">
             <div className="text-center text-sm text-neutral-500">
-              Recorded {formatTime(seconds)}. Listen, then save or re-record.
+              Recorded {formatTime(seconds)}. {mediaType === "video" ? "Watch" : "Listen"}, then save or re-record.
             </div>
-            <audio src={URL.createObjectURL(blob)} controls className="w-full" />
+            {mediaType === "video" ? (
+              <video src={URL.createObjectURL(blob)} controls className="w-full rounded-lg" />
+            ) : (
+              <audio src={URL.createObjectURL(blob)} controls className="w-full" />
+            )}
             <div className="flex gap-3">
               <button
                 type="button"

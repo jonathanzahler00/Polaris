@@ -12,6 +12,14 @@ const ReminderSettings = dynamic(
   { ssr: false }
 );
 
+const MonthClipsSettings = dynamic(
+  () =>
+    import("@/components/features/month/MonthClipsSettings").then((m) => ({
+      default: m.MonthClipsSettings,
+    })),
+  { ssr: false }
+);
+
 export default function SettingsClient() {
   return (
     <div className="min-h-screen w-full">
@@ -43,6 +51,8 @@ export default function SettingsClient() {
               Set Up Widget
             </Link>
           </div>
+
+          <MonthClipsSettings />
 
           <ReminderSettings />
         </main>

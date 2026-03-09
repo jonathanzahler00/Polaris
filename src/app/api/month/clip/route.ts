@@ -22,5 +22,6 @@ export async function GET(request: Request) {
     url: result.url,
     month,
     duration_seconds: result.duration_seconds,
+    media_type: result.media_type,
   });
 }

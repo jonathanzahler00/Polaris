@@ -15,10 +15,22 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Bad request" }, { status: 400 });
   }
 
-  const audio = formData.get("audio") as Blob | null;
+  const clip = formData.get("clip") as Blob | File | null;
   const durationStr = formData.get("duration_seconds") as string | null;
-  if (!audio || !(audio instanceof Blob) || !durationStr) {
-    return NextResponse.json({ error: "Missing audio or duration_seconds" }, { status: 400 });
+  const mediaType = (formData.get("media_type") as string | null) ?? "audio";
+  if (!clip || !durationStr) {
+    return NextResponse.json({ error: "Missing clip or duration_seconds" }, { status: 400 });
+  }
+  if (mediaType !== "audio" && mediaType !== "video") {
+    return NextResponse.json({ error: "media_type must be audio or video" }, { status: 400 });
+  }
+  const blob = clip instanceof Blob ? clip : (clip as File);
+  let buffer: Buffer;
+  try {
+    const arrayBuffer = await blob.arrayBuffer();
+    buffer = Buffer.from(arrayBuffer);
+  } catch {
+    return NextResponse.json({ error: "Invalid clip file" }, { status: 400 });
   }
 
   const duration = Number(durationStr);
@@ -29,8 +41,9 @@ export async function POST(request: Request) {
   const result = await saveMonthClip(
     session.user.id,
     session.profile.timezone,
-    audio,
+    buffer,
     duration,
+    mediaType as "audio" | "video",
   );
   if (!result.ok) {
     return NextResponse.json({ error: result.error }, { status: 400 });
