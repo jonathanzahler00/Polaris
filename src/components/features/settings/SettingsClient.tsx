@@ -13,10 +13,7 @@ const ReminderSettings = dynamic(
 );
 
 const MonthClipsSettings = dynamic(
-  () =>
-    import("@/components/features/month/MonthClipsSettings").then((m) => ({
-      default: m.MonthClipsSettings,
-    })),
+  () => import("@/components/features/month/MonthClipsSettings"),
   { ssr: false }
 );
 
