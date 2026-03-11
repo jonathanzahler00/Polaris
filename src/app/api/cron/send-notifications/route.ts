@@ -1,15 +1,19 @@
 import { NextResponse } from "next/server";
 import webPush from "web-push";
 
-import { getLocalDateISO, getLocalTimeHHmm, normalizeTimeToHHmm } from "@/lib/utils/date";
+import { getLocalDateISO } from "@/lib/utils/date";
 import { getRequiredEnv } from "@/lib/utils/env";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 
 const NOTIFICATION_TITLE = "Time to Set Your Orientation";
 const NOTIFICATION_BODY = "Set your daily focus before the day takes over.";
 
+/**
+ * Runs once per day at 06:00 UTC (cron: 0 6 * * *).
+ * Sends one push to each user who has reminders enabled and hasn't been notified today (in their timezone).
+ * Everyone receives the reminder at the same UTC time (different local times).
+ */
 export async function GET(request: Request) {
-  // Vercel Cron sends Authorization: Bearer <CRON_SECRET>
   const authHeader = request.headers.get("authorization");
   const cronSecret = process.env.CRON_SECRET;
 
@@ -33,7 +37,7 @@ export async function GET(request: Request) {
 
   const { data: profilesData, error: profilesError } = await admin
     .from("profiles")
-    .select("user_id,timezone,notification_time,last_notified_on,onboarding_completed,notifications_enabled")
+    .select("user_id,timezone,last_notified_on,onboarding_completed,notifications_enabled")
     .eq("onboarding_completed", true)
     .eq("notifications_enabled", true);
 
@@ -44,24 +48,16 @@ export async function GET(request: Request) {
   const profiles = profilesData as Array<{
     user_id: string;
     timezone: string;
-    notification_time: string;
     last_notified_on: string | null;
   }>;
 
-  let considered = 0;
   let sent = 0;
 
   for (const profile of profiles) {
-    const nowTime = getLocalTimeHHmm(profile.timezone);
-    const targetTime = normalizeTimeToHHmm(profile.notification_time);
-    if (nowTime !== targetTime) continue;
-
     const today = getLocalDateISO(profile.timezone);
     if (profile.last_notified_on === today) continue;
 
-    considered += 1;
-
-    // Reset widget to blank at reminder time: clear today's orientation so widget shows "Not set yet"
+    // Reset widget so it shows "Not set yet" when they get the reminder
     await admin
       .from("daily_orientations")
       .delete()
@@ -116,6 +112,6 @@ export async function GET(request: Request) {
     }
   }
 
-  return NextResponse.json({ ok: true, considered, sent });
+  return NextResponse.json({ ok: true, sent });
 }
 
