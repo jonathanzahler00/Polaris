@@ -17,7 +17,11 @@ const MonthClipsSettings = dynamic(
   { ssr: false }
 );
 
-export default function SettingsClient() {
+type Props = {
+  vapidPublicKey?: string;
+};
+
+export default function SettingsClient({ vapidPublicKey = "" }: Props) {
   return (
     <div className="min-h-screen w-full">
       <div className="mx-auto flex min-h-screen w-full max-w-xl flex-col px-6 py-10">
@@ -51,7 +55,7 @@ export default function SettingsClient() {
 
           <MonthClipsSettings />
 
-          <ReminderSettings />
+          <ReminderSettings vapidPublicKey={vapidPublicKey} />
         </main>
       </div>
     </div>

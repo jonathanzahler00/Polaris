@@ -5,7 +5,8 @@ import { getLocalDateISO, getLocalTimeHHmm, normalizeTimeToHHmm } from "@/lib/ut
 import { getRequiredEnv } from "@/lib/utils/env";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 
-const NOTIFICATION_BODY = "Before the day takes over.";
+const NOTIFICATION_TITLE = "Time to Set Your Orientation";
+const NOTIFICATION_BODY = "Set your daily focus before the day takes over.";
 
 export async function GET(request: Request) {
   // Vercel Cron sends Authorization: Bearer <CRON_SECRET>
@@ -92,7 +93,7 @@ export async function GET(request: Request) {
             endpoint: sub.endpoint,
             keys: { p256dh: sub.p256dh, auth: sub.auth },
           },
-          JSON.stringify({ body: NOTIFICATION_BODY }),
+          JSON.stringify({ title: NOTIFICATION_TITLE, body: NOTIFICATION_BODY }),
         );
         anySuccess = true;
       } catch (err) {

@@ -2,16 +2,20 @@
 
 import { useState, useEffect } from "react";
 import { initializeReminderScheduler } from "@/lib/utils/reminder-scheduler";
+import { subscribeToPush } from "@/lib/utils/push";
 
 type Props = {
   onTimeSet?: (time: string) => void;
+  /** VAPID public key for Web Push – required for reminders when app is closed/background (e.g. on phone) */
+  vapidPublicKey?: string;
 };
 
-export function ReminderSettings({ onTimeSet }: Props) {
+export function ReminderSettings({ onTimeSet, vapidPublicKey }: Props) {
   const [reminderTime, setReminderTime] = useState<string>("");
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>("default");
   const [canSetTime, setCanSetTime] = useState(true);
   const [nextChangeDate, setNextChangeDate] = useState<string>("");
+  const [resyncing, setResyncing] = useState(false);
 
   useEffect(() => {
     // Load saved reminder time from localStorage
@@ -80,13 +84,18 @@ export function ReminderSettings({ onTimeSet }: Props) {
         // Ensure service worker is registered so device notifications work at the chosen time
         await navigator.serviceWorker.register("/sw.js", { scope: "/" }).then(() => navigator.serviceWorker.ready);
 
-        // Store the reminder time and when it was changed; start scheduler
+        // Subscribe to push so the server cron can send the reminder when the app is closed/background (e.g. on phone)
+        if (vapidPublicKey) {
+          await subscribeToPush(vapidPublicKey);
+        }
+
+        // Store the reminder time and when it was changed; start scheduler (for when app is open)
         localStorage.setItem("polaris_reminder_time", time);
         localStorage.setItem("polaris_reminder_enabled", "true");
         localStorage.setItem("polaris_reminder_last_changed", new Date().toISOString());
         initializeReminderScheduler();
 
-        // Set up daily alarm using service worker
+        // Sync time to profile so cron knows when to send push
         await fetch("/api/reminder/schedule", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -147,6 +156,29 @@ export function ReminderSettings({ onTimeSet }: Props) {
           {!canSetTime && (
             <p className="text-xs text-neutral-500">
               Can be changed in {nextChangeDate}
+            </p>
+          )}
+          {vapidPublicKey && (
+            <p className="text-xs text-neutral-500">
+              Not getting reminders on your phone?{" "}
+              <button
+                type="button"
+                onClick={async () => {
+                  setResyncing(true);
+                  try {
+                    await subscribeToPush(vapidPublicKey);
+                    alert("Reminder synced. You should get notifications at your set time.");
+                  } catch {
+                    alert("Resync failed. Check that notifications are allowed for this site.");
+                  } finally {
+                    setResyncing(false);
+                  }
+                }}
+                disabled={resyncing}
+                className="underline hover:no-underline disabled:opacity-50"
+              >
+                {resyncing ? "Syncing…" : "Resync notifications"}
+              </button>
             </p>
           )}
         </div>

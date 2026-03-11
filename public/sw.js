@@ -99,18 +99,22 @@ self.addEventListener("fetch", (event) => {
   );
 });
 
-// Push notifications
+// Push notifications (e.g. daily reminder from cron)
 self.addEventListener("push", (event) => {
   const data = event.data?.json() || {};
-  const body = data.body || "Before the day takes over.";
-  
+  const title = data.title || "Polaris";
+  const body = data.body || "Set your daily focus before the day takes over.";
+  const url = data.url || "/?alarm=true";
+
   event.waitUntil(
-    self.registration.showNotification("Polaris", {
+    self.registration.showNotification(title, {
       body,
       icon: "/icons/icon-192.png",
       badge: "/icons/icon-96.png",
       vibrate: [100, 50, 100],
-      data: { url: "/" },
+      tag: "polaris-daily-reminder",
+      requireInteraction: true,
+      data: { url },
     })
   );
 });

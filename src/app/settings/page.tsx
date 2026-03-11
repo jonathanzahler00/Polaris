@@ -3,5 +3,6 @@ import SettingsClient from "@/components/features/settings/SettingsClient";
 
 export default async function SettingsPage() {
   await getSessionWithProfile();
-  return <SettingsClient />;
+  const vapidPublicKey = process.env.VAPID_PUBLIC_KEY ?? "";
+  return <SettingsClient vapidPublicKey={vapidPublicKey} />;
 }
