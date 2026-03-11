@@ -230,7 +230,7 @@ export function ReminderSettings({ onTimeSet, vapidPublicKey }: Props) {
 
           <div className="text-xs text-neutral-500 leading-relaxed">
             <p>
-              💡 You'll receive a notification at your chosen time each day. Clicking it opens Polaris in fullscreen to set your daily orientation.
+              💡 One reminder per day: when the app is open, it uses your chosen time; when closed, a push is sent once daily (6:00 UTC). Tapping it opens Polaris to set your daily orientation.
             </p>
           </div>
         </div>
