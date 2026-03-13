@@ -113,7 +113,7 @@ export default function MonthRecordClient({
     setStatus("uploading");
     setError(null);
     const form = new FormData();
-    form.append("clip", blob);
+    form.append("clip", blob, "clip.webm");
     form.append("duration_seconds", String(seconds));
     form.append("media_type", mediaType);
     const res = await fetch("/api/month/record", { method: "POST", body: form });

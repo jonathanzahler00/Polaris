@@ -1,8 +1,6 @@
-import { NextRequest } from "next/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { getLocalDateISO } from "@/lib/utils/date";
 import { getProfileForUser } from "@/lib/services/profile";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 /**
  * Simple HTML view for widgets
@@ -30,17 +28,21 @@ export default async function WidgetViewPage({
       if (matchedUser) {
         const profile = await getProfileForUser(matchedUser.id);
         const today = getLocalDateISO(profile.timezone);
-        date = today;
 
-        const supabase = await createSupabaseServerClient();
-        const { data } = await supabase
+        // Return the most recently locked orientation so the widget keeps showing
+        // the last set focus until the user sets a new one.
+        const adminClient = createSupabaseAdminClient();
+        const { data } = await adminClient
           .from("daily_orientations")
-          .select("text")
+          .select("text, date")
           .eq("user_id", matchedUser.id)
-          .eq("date", today)
+          .not("locked_at", "is", null)
+          .order("date", { ascending: false })
+          .limit(1)
           .maybeSingle();
 
         orientation = data?.text || null;
+        date = data?.date || today;
       } else {
         error = "Invalid token";
       }

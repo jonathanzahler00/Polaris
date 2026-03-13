@@ -13,17 +13,6 @@ class TokenManager(context: Context) {
         Context.MODE_PRIVATE
     )
 
-    companion object {
-        private const val KEY_TOKEN = "widget_token"
-        private const val KEY_BASE_URL = "base_url"
-        private const val KEY_CACHED_TEXT = "cached_text"
-        private const val KEY_CACHED_DATE = "cached_date"
-        private const val KEY_CACHED_LOCKED = "cached_locked"
-        private const val KEY_LAST_FETCH_TIME = "last_fetch_time"
-        private const val KEY_CACHED_REMINDER_TIME = "cached_reminder_time"  // "HH:mm"
-        private const val KEY_CACHED_TIMEZONE = "cached_timezone"
-    }
-
     fun saveToken(token: String) {
         prefs.edit().putString(KEY_TOKEN, token).apply()
     }
@@ -94,51 +83,44 @@ class TokenManager(context: Context) {
     }
 
     /**
-     * Check if cache is still valid for today.
-     * Cache is valid if:
-     * 1. We have cached data and cached date matches today (in user's timezone when available).
-     * 2. If orientation is locked, cache is valid for the whole day EXCEPT after the user's
-     *    reminder time (when server clears orientation) - then we invalidate so widget refetches and shows blank.
+     * Check if the cache is still fresh enough to use without an API call.
+     *
+     * The server now returns the most recently locked orientation regardless of date,
+     * so we no longer invalidate by day or reminder time. Instead we use a short
+     * time-based window so the widget picks up a newly set focus within ~5 minutes
+     * while avoiding redundant API calls on every widget draw.
+     *
+     * Cache is valid when:
+     * - We have a locked orientation cached, AND
+     * - It was fetched less than CACHE_TTL_MS ago.
+     *
+     * If nothing is locked yet (never set), we always re-fetch so the widget
+     * transitions to the focus text as soon as the user locks one.
      */
     fun isCacheValidForToday(todayDate: String): Boolean {
-        val cachedDate = getCachedDate()
         val cachedText = getCachedText()
         val isLocked = getCachedLocked()
 
-        // No cached data
-        if (cachedDate.isNullOrBlank()) return false
+        // No locked data cached – always fetch
+        if (!isLocked || cachedText.isNullOrBlank()) return false
 
-        // Prefer "today" in user's timezone when we have it; otherwise use passed device date
-        val todayInUserZone = getCachedTimezone()?.let { zone ->
-            try {
-                val cal = java.util.Calendar.getInstance(java.util.TimeZone.getTimeZone(zone))
-                String.format("%04d-%02d-%02d",
-                    cal.get(java.util.Calendar.YEAR),
-                    cal.get(java.util.Calendar.MONTH) + 1,
-                    cal.get(java.util.Calendar.DAY_OF_MONTH))
-            } catch (_: Exception) { null }
-        } ?: todayDate
+        // Locked data present – valid for CACHE_TTL_MS so we still poll for new focus
+        val elapsed = System.currentTimeMillis() - getLastFetchTime()
+        return elapsed < CACHE_TTL_MS
+    }
 
-        // Different day - cache invalid
-        if (cachedDate != todayInUserZone) return false
+    companion object {
+        private const val KEY_TOKEN = "widget_token"
+        private const val KEY_BASE_URL = "base_url"
+        private const val KEY_CACHED_TEXT = "cached_text"
+        private const val KEY_CACHED_DATE = "cached_date"
+        private const val KEY_CACHED_LOCKED = "cached_locked"
+        private const val KEY_LAST_FETCH_TIME = "last_fetch_time"
+        private const val KEY_CACHED_REMINDER_TIME = "cached_reminder_time"  // "HH:mm"
+        private const val KEY_CACHED_TIMEZONE = "cached_timezone"
 
-        // If user has reminder enabled: after reminder time today, invalidate so we refetch (server cleared at that time)
-        val reminderTime = getCachedReminderTime()
-        val timezone = getCachedTimezone()
-        if (!reminderTime.isNullOrBlank() && !timezone.isNullOrBlank()) {
-            try {
-                val userZone = java.util.TimeZone.getTimeZone(timezone)
-                val cal = java.util.Calendar.getInstance(userZone)
-                val currentHHmm = String.format("%02d:%02d", cal.get(java.util.Calendar.HOUR_OF_DAY), cal.get(java.util.Calendar.MINUTE))
-                if (currentHHmm >= reminderTime) return false
-            } catch (_: Exception) { /* use rest of logic */ }
-        }
-
-        // Same day and locked - cache valid for whole day (until reminder time, handled above)
-        if (isLocked && cachedText != null) return true
-
-        // Same day but not locked - refetch periodically
-        return false
+        /** How long a locked cache entry is reused before re-checking the server. */
+        private const val CACHE_TTL_MS = 5 * 60 * 1000L  // 5 minutes
     }
 
     fun clearCache() {

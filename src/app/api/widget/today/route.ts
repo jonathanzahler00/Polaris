@@ -110,11 +110,16 @@ export async function GET(request: NextRequest) {
 
     // Use admin client to bypass RLS for widget token authentication
     const adminClient = createSupabaseAdminClient();
+
+    // Return the most recently locked orientation regardless of date, so the widget
+    // keeps displaying the last set focus until the user sets a new one.
     const { data: orientation, error: dbError } = await adminClient
       .from("daily_orientations")
-      .select("text, locked_at")
+      .select("text, date, locked_at")
       .eq("user_id", user.id)
-      .eq("date", today)
+      .not("locked_at", "is", null)
+      .order("date", { ascending: false })
+      .limit(1)
       .maybeSingle();
 
     if (dbError) {
@@ -124,14 +129,14 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Widget-friendly response (reminder_time only when notifications enabled, for cache invalidation at reset time)
+    // Widget-friendly response (reminder_time only when notifications enabled)
     const reminderTime =
       profile.notifications_enabled && profile.notification_time
         ? normalizeTimeToHHmm(String(profile.notification_time))
         : null;
     return NextResponse.json({
       text: orientation?.text || null,
-      date: today,
+      date: orientation?.date || today,
       locked: !!orientation?.locked_at,
       timezone: profile.timezone,
       placeholder: orientation ? null : "Not set yet",

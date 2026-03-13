@@ -34,7 +34,8 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|manifest.json|sw.js|icon.svg|privacy|terms|about|offline\\.html).*)",
+    // Exclude month record upload so large FormData body is available (middleware can block body access)
+    "/((?!_next/static|_next/image|favicon.ico|manifest.json|sw.js|icon.svg|privacy|terms|about|offline\\.html|api/month/record).*)",
   ],
 };
 

@@ -2,7 +2,12 @@ import { withSentryConfig } from "@sentry/nextjs";
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  experimental: {
+    serverActions: {
+      // Allow ~60s video uploads (webm can be 10–50MB)
+      bodySizeLimit: "50mb",
+    },
+  },
 };
 
 export default withSentryConfig(nextConfig, {
