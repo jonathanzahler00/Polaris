@@ -1,5 +1,5 @@
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
-import { getLocalDateISO } from "@/lib/utils/date";
+import { getLocalDateISO, getLocalTimeHHmm } from "@/lib/utils/date";
 import { getProfileForUser } from "@/lib/services/profile";
 
 /**
@@ -28,18 +28,34 @@ export default async function WidgetViewPage({
       if (matchedUser) {
         const profile = await getProfileForUser(matchedUser.id);
         const today = getLocalDateISO(profile.timezone);
+        const localHHmm = getLocalTimeHHmm(profile.timezone);
+        const isPast6am = parseInt(localHHmm.split(":")[0], 10) >= 6;
 
-        // Return the most recently locked orientation so the widget keeps showing
-        // the last set focus until the user sets a new one.
+        // Day resets at 6am in the user's timezone:
+        //   Before 6am → carry the most recently locked focus forward (no blank overnight).
+        //   From 6am on → show today's focus only; if not set, show placeholder.
         const adminClient = createSupabaseAdminClient();
-        const { data } = await adminClient
-          .from("daily_orientations")
-          .select("text, date")
-          .eq("user_id", matchedUser.id)
-          .not("locked_at", "is", null)
-          .order("date", { ascending: false })
-          .limit(1)
-          .maybeSingle();
+        let data = null;
+
+        if (!isPast6am) {
+          const { data: d } = await adminClient
+            .from("daily_orientations")
+            .select("text, date")
+            .eq("user_id", matchedUser.id)
+            .not("locked_at", "is", null)
+            .order("date", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          data = d;
+        } else {
+          const { data: d } = await adminClient
+            .from("daily_orientations")
+            .select("text, date")
+            .eq("user_id", matchedUser.id)
+            .eq("date", today)
+            .maybeSingle();
+          data = d;
+        }
 
         orientation = data?.text || null;
         date = data?.date || today;
@@ -112,7 +128,7 @@ export default async function WidgetViewPage({
               <div className="date">{date}</div>
             </>
           ) : (
-            <div className="text placeholder">Not set yet</div>
+            <div className="text placeholder">Waiting for today&apos;s focus</div>
           )}
         </div>
       </body>

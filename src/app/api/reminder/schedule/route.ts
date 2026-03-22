@@ -1,29 +1,22 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 
 import { getAuthUser } from "@/lib/services/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 
-export async function POST(request: NextRequest) {
+const REMINDER_TIME = "06:00";
+
+export async function POST() {
   try {
     const user = await getAuthUser();
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const supabase = await createSupabaseServerClient();
 
-    const { time } = await request.json();
-
-    if (!time || !/^\d{2}:\d{2}$/.test(time)) {
-      return NextResponse.json(
-        { error: "Invalid time format. Expected HH:MM" },
-        { status: 400 }
-      );
-    }
-
-    // Store reminder time in user metadata
+    // Store reminder as enabled in user metadata
     const { error } = await supabase.auth.updateUser({
       data: {
-        reminder_time: time,
+        reminder_time: REMINDER_TIME,
         reminder_enabled: true,
       },
     });
@@ -32,23 +25,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    // Sync to profile so cron can reset widget and send push at this time
+    // Sync to profile so cron can send push
     const admin = createSupabaseAdminClient();
     await admin
       .from("profiles")
       .update({
-        notification_time: time,
+        notification_time: REMINDER_TIME,
         notifications_enabled: true,
       })
       .eq("user_id", user.id);
 
-    return NextResponse.json({ success: true, time });
+    return NextResponse.json({ success: true, time: REMINDER_TIME });
   } catch (error) {
-    console.error("Error scheduling reminder:", error);
-    return NextResponse.json(
-      { error: "Failed to schedule reminder" },
-      { status: 500 }
-    );
+    console.error("Error enabling reminder:", error);
+    return NextResponse.json({ error: "Failed to enable reminder" }, { status: 500 });
   }
 }
 
@@ -58,19 +48,15 @@ export async function GET() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const reminderTime = user.user_metadata?.reminder_time;
     const reminderEnabled = user.user_metadata?.reminder_enabled ?? false;
 
     return NextResponse.json({
-      time: reminderTime || null,
+      time: reminderEnabled ? REMINDER_TIME : null,
       enabled: reminderEnabled,
     });
   } catch (error) {
     console.error("Error getting reminder:", error);
-    return NextResponse.json(
-      { error: "Failed to get reminder" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to get reminder" }, { status: 500 });
   }
 }
 
@@ -91,7 +77,6 @@ export async function DELETE() {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    // Stop cron from clearing widget / sending push
     const admin = createSupabaseAdminClient();
     await admin
       .from("profiles")
@@ -101,9 +86,6 @@ export async function DELETE() {
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Error disabling reminder:", error);
-    return NextResponse.json(
-      { error: "Failed to disable reminder" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to disable reminder" }, { status: 500 });
   }
 }

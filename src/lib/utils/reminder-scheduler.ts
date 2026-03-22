@@ -1,16 +1,15 @@
 /**
  * Client-side reminder scheduler
- * Checks every minute if it's time to show the daily reminder notification
+ * Checks every minute if it's time to show the daily reminder at 6:00 AM local time
  */
+
+const REMINDER_TIME = "06:00";
 
 export function initializeReminderScheduler() {
   if (typeof window === "undefined") return;
 
-  const savedTime = localStorage.getItem("polaris_reminder_time");
   const enabled = localStorage.getItem("polaris_reminder_enabled") === "true";
-
-  // Only run when user has set a time and enabled reminders
-  if (!savedTime || !enabled) return;
+  if (!enabled) return;
 
   // Clear any existing interval
   const existingInterval = localStorage.getItem("polaris_check_interval_id");
@@ -21,17 +20,16 @@ export function initializeReminderScheduler() {
   // Check every minute
   const intervalId = setInterval(async () => {
     const enabled = localStorage.getItem("polaris_reminder_enabled") === "true";
-    const savedTime = localStorage.getItem("polaris_reminder_time");
     const lastShown = localStorage.getItem("polaris_last_notification");
 
-    if (!enabled || !savedTime) return;
+    if (!enabled) return;
 
     const now = new Date();
     const currentTime = `${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}`;
     const today = now.toDateString();
 
-    // Only show once per day
-    if (currentTime === savedTime && lastShown !== today) {
+    // Only show once per day at 6:00 AM local time
+    if (currentTime === REMINDER_TIME && lastShown !== today) {
       await showReminderNotification();
       localStorage.setItem("polaris_last_notification", today);
       // When app is in foreground, also show in-app modal
@@ -69,7 +67,7 @@ async function showReminderNotification() {
   }
 }
 
-// Start scheduler on page load only if user has ever set a reminder
+// Start scheduler on page load if reminders are enabled
 if (typeof window !== "undefined") {
   const run = () => initializeReminderScheduler();
   if (document.readyState === "loading") {

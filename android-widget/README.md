@@ -13,27 +13,34 @@ Home screen widget that shows your daily orientation from the Polaris app.
 Your system is using Java 25 (or another very new JDK). Gradle must run with **JDK 17**:
 
 - **Windows (PowerShell):**  
-  `$env:JAVA_HOME = "C:\Program Files\Java\jdk-17"`  
-  (Adjust path if JDK 17 is installed elsewhere, e.g. `C:\Program Files\Eclipse Adoptium\jdk-17*`.)
+  `$env:JAVA_HOME = "C:\Program Files\Eclipse Adoptium\jdk-17.0.18.8-hotspot"`  
+  (Or use Android Studio’s bundled JDK: `C:\Program Files\Android\Android Studio\jbr`. Adjust if your Adoptium folder version differs.)
 
 - **macOS/Linux:**  
   `export JAVA_HOME=$(/usr/libexec/java_home -v 17)`  
   or point `JAVA_HOME` to your JDK 17 install.
 
-Then run `./gradlew assembleDebug` again.
+Then run `./gradlew assembleProdDebug` again.
+
+## Version numbers
+
+Edit **`version.properties`** at the repo root of this folder (`VERSION_CODE`, `VERSION_NAME`).  
+See **[VERSIONING.md](VERSIONING.md)** for beta vs prod flavors and naming.
 
 ## Build
+
+We use **product flavors**: **`prod`** (default store build) and **`beta`** (separate app id for side-by-side testing).
 
 ### Debug (no keystore)
 
 ```bash
 cd android-widget
-./gradlew assembleDebug
+./gradlew assembleProdDebug
 ```
 
-APK: `app/build/outputs/apk/debug/app-debug.apk`
+APK: `app/build/outputs/apk/prod/debug/app-prod-debug.apk`
 
-### Release (signed)
+### Release (signed) — what you ship
 
 1. Create a keystore (once):
 
@@ -52,13 +59,23 @@ APK: `app/build/outputs/apk/debug/app-debug.apk`
 
    Or leave the sample values in `app/build.gradle.kts` only for local builds (never commit real passwords).
 
-3. Build release:
+3. Bump **`version.properties`**, then build **production** release:
 
    ```bash
-   ./gradlew assembleRelease
+   ./gradlew assembleProdRelease
    ```
 
-APK: `app/build/outputs/apk/release/app-release.apk`
+   APK: `app/build/outputs/apk/prod/release/app-prod-release.apk`
+
+4. **Beta track** (optional — installs as `com.polaris.widget.beta`, version name gets `-beta` suffix):
+
+   ```bash
+   ./gradlew assembleBetaRelease
+   ```
+
+   APK: `app/build/outputs/apk/beta/release/app-beta-release.apk`
+
+PowerShell: **`build-widget.ps1`** runs `assembleProdRelease` and prints the prod release path.
 
 ## Setup (users)
 
@@ -67,11 +84,23 @@ APK: `app/build/outputs/apk/release/app-release.apk`
 3. When prompted, open [polarisapp.vercel.app](https://polarisapp.vercel.app), sign in, go to **Widget**, and generate/copy your token.
 4. Paste the token in the widget config and tap **Save**. Optionally set a custom server URL if you self-host Polaris.
 
-The widget refreshes periodically and on tap; tap also opens the Polaris web app.
+The widget refreshes every few minutes and on tap; tap also opens the Polaris web app. When you lock an orientation in the web app, the server sends an FCM push to all registered devices so the widget updates immediately without waiting for the next polling cycle.
+
+### Daily reset behaviour
+
+| Time | Widget shows |
+|------|-------------|
+| Focus locked (any time) | Your focus text and the date it was set |
+| Overnight / before 6 am | Same locked focus carried forward — never goes blank overnight |
+| **6:00 am (your local time)** | **Resets → "Waiting for today's focus"** |
+| After 6 am, new focus locked | Today's focus text and today's date |
+
+The 6 am reset uses your account timezone (set in the Polaris app). Until you lock a new focus after 6 am, the widget shows the waiting message so you have a clear prompt to set your intention for the day.
 
 ## Project structure
 
 - `app/src/main/java/com/polaris/widget/` – widget provider, config activity
+- `app/src/main/java/com/polaris/widget/PolarisFirebaseMessagingService.kt` – FCM service; handles instant widget refresh and token registration with the server
 - `app/src/main/java/com/polaris/widget/data/` – API client, token/cache storage
 - `app/src/main/java/com/polaris/widget/workers/` – WorkManager periodic update
 - `app/src/main/res/layout/` – widget and config UI
@@ -79,4 +108,4 @@ The widget refreshes periodically and on tap; tap also opens the Polaris web app
 
 ## Version
 
-- **versionCode** / **versionName** in `app/build.gradle.kts` (currently 12 / 1.7.0).
+- **`version.properties`** — `VERSION_CODE` and `VERSION_NAME` (loaded by `app/build.gradle.kts`).

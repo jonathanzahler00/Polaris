@@ -44,53 +44,27 @@ export default function TodayClient({
     }
   }, [lockedText]);
 
-  // Check if we should show monthly reminder prompt
+  // Show reminder prompt once if user hasn't been asked before
   useEffect(() => {
-    const lastChanged = localStorage.getItem("polaris_reminder_last_changed");
-
-    if (!lastChanged) {
-      // First time - show prompt
-      setShowReminderPrompt(true);
-      return;
-    }
-
-    const lastChangedDate = new Date(lastChanged);
-    const now = new Date();
-    const currentMonth = now.getMonth();
-    const currentYear = now.getFullYear();
-    const lastChangedMonth = lastChangedDate.getMonth();
-    const lastChangedYear = lastChangedDate.getFullYear();
-
-    // Show prompt if it's a new calendar month
-    const isNewMonth = currentYear > lastChangedYear || currentMonth > lastChangedMonth;
-    if (isNewMonth) {
+    const seen = localStorage.getItem("polaris_reminder_seen");
+    const enabled = localStorage.getItem("polaris_reminder_enabled");
+    if (!seen && !enabled) {
       setShowReminderPrompt(true);
     }
   }, []);
 
-  const handleReminderPromptClose = async (selectedTime?: string) => {
+  const handleReminderPromptClose = async (confirmed?: boolean) => {
     setShowReminderPrompt(false);
+    localStorage.setItem("polaris_reminder_seen", new Date().toISOString());
 
-    if (selectedTime) {
-      // Save the reminder time and enable scheduler
-      localStorage.setItem("polaris_reminder_time", selectedTime);
+    if (confirmed) {
       localStorage.setItem("polaris_reminder_enabled", "true");
-      localStorage.setItem("polaris_reminder_last_changed", new Date().toISOString());
       initializeReminderScheduler();
-
-      // Schedule via API
       try {
-        await fetch("/api/reminder/schedule", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ time: selectedTime }),
-        });
+        await fetch("/api/reminder/schedule", { method: "POST" });
       } catch (error) {
         console.error("Failed to schedule reminder:", error);
       }
-    } else {
-      // User skipped - still mark as "changed" to not prompt again this month
-      localStorage.setItem("polaris_reminder_last_changed", new Date().toISOString());
     }
   };
 

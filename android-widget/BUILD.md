@@ -42,22 +42,22 @@ Complete guide to building and deploying the Android widget app.
 2. **Build → Build Bundle(s) / APK(s) → Build APK(s)**
 3. Wait for "Build successful" notification
 4. Click "locate" in notification
-5. APK is at: `app/build/outputs/apk/debug/app-debug.apk`
+5. APK is at: `app/build/outputs/apk/prod/debug/app-prod-debug.apk` (prod flavor)
 
 ### Option 2: Command Line
 
 ```bash
 cd android-widget
-./gradlew assembleDebug
+./gradlew assembleProdDebug
 ```
 
 Windows:
 ```cmd
 cd android-widget
-gradlew.bat assembleDebug
+gradlew.bat assembleProdDebug
 ```
 
-Output: `app/build/outputs/apk/debug/app-debug.apk`
+Output: `app/build/outputs/apk/prod/debug/app-prod-debug.apk`
 
 ## Building Release APK (For Distribution)
 
@@ -132,13 +132,13 @@ android {
 ### Step 3: Build Release APK
 
 **Android Studio:**
-1. Build → Select Build Variant → Change "debug" to "release"
+1. Build → Select Build Variant → choose **prodRelease** (or **betaRelease** for beta track)
 2. Build → Build Bundle(s) / APK(s) → Build APK(s)
-3. Output: `app/build/outputs/apk/release/app-release.apk`
+3. Output: `app/build/outputs/apk/prod/release/app-prod-release.apk`
 
 **Command Line:**
 ```bash
-./gradlew assembleRelease
+./gradlew assembleProdRelease
 ```
 
 ## Testing on Device
@@ -156,7 +156,7 @@ android {
 
 3. **Install APK**:
    ```bash
-   adb install app/build/outputs/apk/debug/app-debug.apk
+   adb install app/build/outputs/apk/prod/debug/app-prod-debug.apk
    ```
 
    Or in Android Studio:
@@ -177,7 +177,7 @@ android {
 3. Find "Polaris"
 4. Drag to home screen
 5. Configuration screen appears
-6. Paste widget token from https://polaris-iota-orcin.vercel.app/widget
+6. Paste widget token from https://polarisapp.vercel.app/widget
 7. Tap "Save"
 8. Widget should show current orientation
 
@@ -199,7 +199,7 @@ android {
 1. Build release APK (see above)
 2. Upload to GitHub Releases:
    ```bash
-   gh release create v1.0.0 app/build/outputs/apk/release/app-release.apk
+   gh release create v1.0.0 app/build/outputs/apk/prod/release/app-prod-release.apk
    ```
 3. Share download link
 
@@ -230,11 +230,11 @@ android {
 
 3. **Upload Release**
    - Production → Create new release
-   - Upload `app-release.apk` or build AAB:
+   - Upload `app-prod-release.apk` or build AAB:
      ```bash
      ./gradlew bundleRelease
      ```
-   - Upload `app/build/outputs/bundle/release/app-release.aab`
+   - Upload `app/build/outputs/bundle/prod/release/app-prod-release.aab`
 
 4. **App Content**
    - Privacy policy (required)
@@ -247,23 +247,12 @@ android {
 
 ## Versioning
 
-Update version in `app/build.gradle.kts`:
+Edit **`version.properties`** in the `android-widget/` folder (`VERSION_CODE`, `VERSION_NAME`).  
+See **[VERSIONING.md](VERSIONING.md)** for beta vs prod flavors and CI.
 
-```kotlin
-defaultConfig {
-    versionCode = 2  // Increment for each release
-    versionName = "1.0.1"  // User-visible version
-}
-```
+**Version code:** must increase for every Play Store / release upload.
 
-**Version Code Rules:**
-- Must increment for each new release
-- Google Play rejects lower version codes
-- Suggestion: Use date-based (e.g., 20260104 for Jan 4, 2026)
-
-**Version Name:**
-- User-visible (e.g., "1.0.0", "1.1.0")
-- Semantic versioning recommended
+**Version name:** semantic versioning; use `-beta.N` in the string for pre-release (e.g. `1.9.0-beta.1`) when building the **prod** flavor.
 
 ## Troubleshooting
 
@@ -333,13 +322,13 @@ jobs:
       - name: Build Release APK
         run: |
           cd android-widget
-          ./gradlew assembleRelease
+          ./gradlew assembleProdRelease
 
       - name: Upload APK
         uses: actions/upload-artifact@v3
         with:
-          name: app-release
-          path: android-widget/app/build/outputs/apk/release/app-release.apk
+          name: app-prod-release
+          path: android-widget/app/build/outputs/apk/prod/release/app-prod-release.apk
 ```
 
 ## Next Steps

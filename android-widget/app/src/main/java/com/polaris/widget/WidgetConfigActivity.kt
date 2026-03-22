@@ -70,6 +70,9 @@ class WidgetConfigActivity : AppCompatActivity() {
             }
             tokenManager.saveToken(token)
 
+            // Register FCM token with server now that we have a widget token
+            PolarisFirebaseMessagingService.retryRegistration(this)
+
             // Update widget immediately
             val appWidgetManager = AppWidgetManager.getInstance(this)
             PolarisWidget.updateAppWidget(this, appWidgetManager, appWidgetId)

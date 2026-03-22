@@ -29,6 +29,7 @@
     "@sentry/nextjs": "^9",
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.89.0",
+    "firebase-admin": "^13.7.0",
     "luxon": "^3.7.2",
     "next": "16.1.1",
     "react": "19.2.3",

@@ -53,6 +53,9 @@ class MainActivity : AppCompatActivity() {
             tokenManager.saveToken(token)
             PolarisWidget.updateAllWidgets(this)
 
+            // Retry FCM registration now that the widget token is set
+            PolarisFirebaseMessagingService.retryRegistration(this)
+
             statusText.text = "✓ Token saved and widgets updated"
             updateStatus(statusText)
         }

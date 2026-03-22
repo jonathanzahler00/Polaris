@@ -10,23 +10,23 @@ cd android-widget
 # Generate signing key (first time only)
 keytool -genkey -v -keystore polaris-widget.keystore -alias polaris -keyalg RSA -keysize 2048 -validity 10000
 
-# Build release APK
-./gradlew assembleRelease
+# Build production release APK (see VERSIONING.md for beta vs prod)
+./gradlew assembleProdRelease
 ```
 
-**Output:** `app/build/outputs/apk/release/app-release.apk`
+**Output:** `app/build/outputs/apk/prod/release/app-prod-release.apk`
 
 ### 2. Host on GitHub Releases (2 minutes)
 
 ```bash
 # Create release on GitHub
-gh release create v1.0.0 android-widget/app/build/outputs/apk/release/app-release.apk \
+gh release create v1.0.0 android-widget/app/build/outputs/apk/prod/release/app-prod-release.apk \
   --title "Polaris Widget v1.0.0" \
   --notes "Initial release - Native Android widget for Polaris"
 ```
 
-**Download URL:**
-`https://github.com/jonathanzahler00/Polaris/releases/download/v1.0.0/app-release.apk`
+**Download URL** (match the uploaded asset filename, e.g.):
+`https://github.com/jonathanzahler00/Polaris/releases/download/v1.0.0/app-prod-release.apk`
 
 ### 3. Update Web App Widget Page (3 minutes)
 
@@ -42,7 +42,7 @@ Edit `src/app/widget/WidgetClient.tsx`:
   </p>
 
   <a
-    href="https://github.com/jonathanzahler00/Polaris/releases/latest/download/app-release.apk"
+    href="https://github.com/jonathanzahler00/Polaris/releases/latest/download/app-prod-release.apk"
     download
     className="inline-block px-6 py-3 bg-neutral-900 text-white rounded-lg font-medium hover:bg-neutral-800"
   >
@@ -87,7 +87,7 @@ Edit `src/app/widget/WidgetClient.tsx`:
 
 3. **Install APK**
    - Open Downloads
-   - Tap `app-release.apk`
+   - Tap `app-prod-release.apk` (or whatever you named the release asset)
    - Allow installation
    - Open app (optional - just for token management)
 
@@ -161,12 +161,12 @@ Edit `src/app/widget/WidgetClient.tsx`:
 
 2. **Build new release:**
    ```bash
-   ./gradlew assembleRelease
+   ./gradlew assembleProdRelease
    ```
 
 3. **Create GitHub release:**
    ```bash
-   gh release create v1.0.1 app/build/outputs/apk/release/app-release.apk
+   gh release create v1.0.1 app/build/outputs/apk/prod/release/app-prod-release.apk
    ```
 
 4. **Notify users** (if not on Play Store)
@@ -248,7 +248,7 @@ Category: Productivity
 ### 5. Upload & Submit
 
 1. Create production release
-2. Upload `app-release.aab` (build with `./gradlew bundleRelease`)
+2. Upload `app-prod-release.aab` (build with `./gradlew bundleProdRelease`)
 3. Complete content rating questionnaire
 4. Add privacy policy URL
 5. Submit for review

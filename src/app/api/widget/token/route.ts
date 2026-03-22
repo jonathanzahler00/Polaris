@@ -4,6 +4,7 @@ import { randomBytes } from "crypto";
 import { getAuthUser } from "@/lib/services/auth";
 import { safeError } from "@/lib/utils/errors";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 
 /**
  * Widget Token Management API
@@ -19,14 +20,15 @@ export async function POST() {
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const supabase = await createSupabaseServerClient();
+    const admin = createSupabaseAdminClient();
 
-    // Generate a secure random token
     const token = randomBytes(32).toString("hex");
 
-    // Store token in user metadata
-    const { error: updateError } = await supabase.auth.updateUser({
-      data: { widget_token: token },
-    });
+    // Store in user metadata (for display/revocation) and in the lookup table (for fast auth)
+    const [{ error: updateError }] = await Promise.all([
+      supabase.auth.updateUser({ data: { widget_token: token } }),
+      admin.from("widget_tokens").upsert({ token, user_id: user.id }, { onConflict: "token" }),
+    ]);
 
     if (updateError) {
       return NextResponse.json(
@@ -49,11 +51,17 @@ export async function DELETE() {
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const supabase = await createSupabaseServerClient();
+    const admin = createSupabaseAdminClient();
 
-    // Remove token from user metadata
-    const { error: updateError } = await supabase.auth.updateUser({
-      data: { widget_token: null },
-    });
+    // Get the current token before clearing it so we can remove it from the lookup table
+    const currentToken = user.user_metadata?.widget_token as string | undefined;
+
+    const [{ error: updateError }] = await Promise.all([
+      supabase.auth.updateUser({ data: { widget_token: null } }),
+      currentToken
+        ? admin.from("widget_tokens").delete().eq("token", currentToken)
+        : Promise.resolve({ error: null }),
+    ]);
 
     if (updateError) {
       return NextResponse.json(

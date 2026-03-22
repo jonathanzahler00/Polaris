@@ -85,24 +85,40 @@ class TokenManager(context: Context) {
     /**
      * Check if the cache is still fresh enough to use without an API call.
      *
-     * The server now returns the most recently locked orientation regardless of date,
-     * so we no longer invalidate by day or reminder time. Instead we use a short
-     * time-based window so the widget picks up a newly set focus within ~5 minutes
-     * while avoiding redundant API calls on every widget draw.
+     * The day resets at 6am in the user's local timezone:
+     *   • Before 6am  – carry the most recently locked focus forward (no blank overnight).
+     *   • From 6am on – only today's focus is valid; if the cache is from a previous day,
+     *                   invalidate so the widget immediately re-fetches and shows the
+     *                   "Waiting for today's focus" state.
      *
-     * Cache is valid when:
-     * - We have a locked orientation cached, AND
-     * - It was fetched less than CACHE_TTL_MS ago.
-     *
-     * If nothing is locked yet (never set), we always re-fetch so the widget
-     * transitions to the focus text as soon as the user locks one.
+     * On top of that, a 5-minute TTL ensures the widget picks up a newly set focus
+     * within one worker cycle rather than staying stuck all day.
      */
     fun isCacheValidForToday(todayDate: String): Boolean {
         val cachedText = getCachedText()
         val isLocked = getCachedLocked()
+        val cachedDate = getCachedDate()
 
         // No locked data cached – always fetch
         if (!isLocked || cachedText.isNullOrBlank()) return false
+
+        // Check the 6am reset boundary in the user's timezone
+        val timezone = getCachedTimezone()
+        if (!cachedDate.isNullOrBlank() && !timezone.isNullOrBlank()) {
+            try {
+                val userZone = java.util.TimeZone.getTimeZone(timezone)
+                val cal = java.util.Calendar.getInstance(userZone)
+                val currentHour = cal.get(java.util.Calendar.HOUR_OF_DAY)
+                val currentDate = String.format(
+                    "%04d-%02d-%02d",
+                    cal.get(java.util.Calendar.YEAR),
+                    cal.get(java.util.Calendar.MONTH) + 1,
+                    cal.get(java.util.Calendar.DAY_OF_MONTH)
+                )
+                // It's past 6am and the cached focus is from a previous day → stale
+                if (currentHour >= RESET_HOUR && cachedDate < currentDate) return false
+            } catch (_: Exception) { /* fall through to TTL check */ }
+        }
 
         // Locked data present – valid for CACHE_TTL_MS so we still poll for new focus
         val elapsed = System.currentTimeMillis() - getLastFetchTime()
@@ -121,6 +137,9 @@ class TokenManager(context: Context) {
 
         /** How long a locked cache entry is reused before re-checking the server. */
         private const val CACHE_TTL_MS = 5 * 60 * 1000L  // 5 minutes
+
+        /** Hour of day (in user's local timezone) when the daily focus resets. */
+        private const val RESET_HOUR = 6
     }
 
     fun clearCache() {

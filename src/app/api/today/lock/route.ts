@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { getTodayForAuthedUser } from "@/lib/services/today";
 import { hasRecordedClipForMonth } from "@/lib/services/month-clip";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 
 type Body = { text: string };
 
@@ -45,12 +46,14 @@ export async function POST(request: Request) {
       .single();
 
     if (error) {
-      // Unique violation (user_id, date)
       if ((error as { code?: string }).code === "23505") {
         return NextResponse.json({ error: "Conflict" }, { status: 409 });
       }
       return NextResponse.json({ error: "Insert failed" }, { status: 500 });
     }
+
+    // Push widget refresh to Android devices via FCM (best-effort, non-blocking)
+    pushWidgetRefresh(user.id).catch(() => {});
 
     return NextResponse.json({ text: data.text });
   } catch {
@@ -58,3 +61,34 @@ export async function POST(request: Request) {
   }
 }
 
+/**
+ * Send an FCM data message to all registered Android widget tokens for this user
+ * so the widget refreshes immediately when the orientation is locked.
+ */
+async function pushWidgetRefresh(userId: string): Promise<void> {
+  if (!process.env.FIREBASE_SERVICE_ACCOUNT_JSON) return;
+
+  const admin = createSupabaseAdminClient();
+
+  const { data: rows } = await admin
+    .from("fcm_tokens")
+    .select("id, token")
+    .eq("user_id", userId)
+    .eq("is_active", true);
+
+  if (!rows || rows.length === 0) return;
+
+  const tokens = rows.map((r: { id: string; token: string }) => r.token);
+
+  const { sendWidgetRefresh } = await import("@/lib/firebase-admin");
+  const staleTokens = await sendWidgetRefresh(tokens);
+
+  // Deactivate stale tokens so we don't keep sending to them
+  if (staleTokens.length > 0) {
+    await admin
+      .from("fcm_tokens")
+      .update({ is_active: false })
+      .in("token", staleTokens)
+      .eq("user_id", userId);
+  }
+}

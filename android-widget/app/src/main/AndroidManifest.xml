@@ -49,5 +49,14 @@
             android:name=".TestActivity"
             android:exported="false"
             android:label="Connection Test" />
+
+        <!-- Firebase Cloud Messaging – widget refresh push -->
+        <service
+            android:name=".PolarisFirebaseMessagingService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
     </application>
 </manifest>

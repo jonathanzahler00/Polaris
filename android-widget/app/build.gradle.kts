@@ -1,7 +1,18 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
+    id("com.google.gms.google-services")
 }
+
+// Version numbers: edit ../version.properties (see VERSIONING.md)
+val versionProps =
+    Properties().apply {
+        rootProject.file("version.properties").inputStream().use { load(it) }
+    }
+val appVersionCode = versionProps.getProperty("VERSION_CODE").toInt()
+val appVersionName = versionProps.getProperty("VERSION_NAME")
 
 android {
     namespace = "com.polaris.widget"
@@ -11,11 +22,24 @@ android {
         applicationId = "com.polaris.widget"
         minSdk = 26
         targetSdk = 34
-        versionCode = 12
-        versionName = "1.7.0"
+        versionCode = appVersionCode
+        versionName = appVersionName
 
         // Default Polaris API base URL (must end with / for Retrofit)
         buildConfigField("String", "DEFAULT_BASE_URL", "\"https://polarisapp.vercel.app/\"")
+    }
+
+    // prod = store / main release (com.polaris.widget). beta = test track, separate install (com.polaris.widget.beta)
+    flavorDimensions += "track"
+    productFlavors {
+        create("prod") {
+            dimension = "track"
+        }
+        create("beta") {
+            dimension = "track"
+            applicationIdSuffix = ".beta"
+            versionNameSuffix = "-beta"
+        }
     }
 
     signingConfigs {
@@ -81,4 +105,8 @@ dependencies {
 
     // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
+
+    // Firebase Cloud Messaging – for instant widget refresh after orientation is locked
+    implementation(platform("com.google.firebase:firebase-bom:33.7.0"))
+    implementation("com.google.firebase:firebase-messaging-ktx")
 }

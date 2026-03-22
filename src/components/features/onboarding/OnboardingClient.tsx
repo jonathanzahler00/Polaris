@@ -7,7 +7,8 @@ function urlBase64ToUint8Array(base64String: string) {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
   const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
   const rawData = window.atob(base64);
-  const outputArray = new Uint8Array(rawData.length);
+  const buffer = new ArrayBuffer(rawData.length);
+  const outputArray = new Uint8Array(buffer);
   for (let i = 0; i < rawData.length; ++i) outputArray[i] = rawData.charCodeAt(i);
   return outputArray;
 }
@@ -18,9 +19,8 @@ type Props = {
 
 export default function OnboardingClient({ vapidPublicKey }: Props) {
   const router = useRouter();
-  const [step, setStep] = useState<0 | 1 | 2>(0);
+  const [step, setStep] = useState<0 | 1>(0);
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
-  const [notificationTime, setNotificationTime] = useState("07:00");
   const [isSaving, setIsSaving] = useState(false);
 
   const timezone = useMemo(
@@ -31,14 +31,14 @@ export default function OnboardingClient({ vapidPublicKey }: Props) {
   const enableReminder = async () => {
     if (!("Notification" in window) || !("serviceWorker" in navigator)) {
       setNotificationsEnabled(false);
-      setStep(2);
+      await finish(false);
       return;
     }
 
     const permission = await Notification.requestPermission();
     if (permission !== "granted") {
       setNotificationsEnabled(false);
-      setStep(2);
+      await finish(false);
       return;
     }
 
@@ -49,13 +49,13 @@ export default function OnboardingClient({ vapidPublicKey }: Props) {
       existing ??
       (await reg.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
+        applicationServerKey: urlBase64ToUint8Array(vapidPublicKey) as BufferSource,
       }));
 
     const json = sub.toJSON();
     if (!json.endpoint || !json.keys?.p256dh || !json.keys?.auth) {
       setNotificationsEnabled(false);
-      setStep(2);
+      await finish(false);
       return;
     }
 
@@ -69,16 +69,24 @@ export default function OnboardingClient({ vapidPublicKey }: Props) {
       }),
     });
 
-    setNotificationsEnabled(res.ok);
-    setStep(2);
+    const enabled = res.ok;
+    setNotificationsEnabled(enabled);
+
+    if (enabled) {
+      localStorage.setItem("polaris_reminder_enabled", "true");
+      localStorage.setItem("polaris_reminder_seen", new Date().toISOString());
+    }
+
+    await finish(enabled);
   };
 
-  const skipReminder = () => {
+  const skipReminder = async () => {
     setNotificationsEnabled(false);
-    setStep(2);
+    localStorage.setItem("polaris_reminder_seen", new Date().toISOString());
+    await finish(false);
   };
 
-  const finish = async () => {
+  const finish = async (notifEnabled: boolean) => {
     setIsSaving(true);
     try {
       await fetch("/api/profile/complete-onboarding", {
@@ -86,8 +94,8 @@ export default function OnboardingClient({ vapidPublicKey }: Props) {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           timezone,
-          notification_time: notificationTime,
-          notifications_enabled: notificationsEnabled,
+          notification_time: "06:00",
+          notifications_enabled: notifEnabled,
         }),
       });
       router.replace("/");
@@ -122,52 +130,26 @@ export default function OnboardingClient({ vapidPublicKey }: Props) {
           {step === 1 ? (
             <>
               <div className="whitespace-pre-line text-base leading-relaxed text-neutral-800">
-                {"We’ll send one quiet reminder each morning.\nNo streaks. No pressure."}
+                {"We'll send one quiet reminder at 6:00 AM each morning.\nNo streaks. No pressure."}
               </div>
               <div className="flex flex-col gap-3">
                 <button
                   type="button"
                   onClick={enableReminder}
-                  className="h-12 w-full rounded-lg bg-neutral-900 text-sm font-medium text-white shadow-sm transition-colors hover:bg-neutral-800"
+                  disabled={isSaving}
+                  className="h-12 w-full rounded-lg bg-neutral-900 text-sm font-medium text-white shadow-sm transition-colors hover:bg-neutral-800 disabled:bg-neutral-300 disabled:cursor-not-allowed"
                 >
-                  Enable reminder
+                  {isSaving ? "Saving…" : "Enable reminder"}
                 </button>
                 <button
                   type="button"
                   onClick={skipReminder}
-                  className="h-12 w-full rounded-lg border border-neutral-200 bg-white text-sm font-medium text-neutral-900 shadow-sm transition-colors hover:bg-neutral-50"
+                  disabled={isSaving}
+                  className="h-12 w-full rounded-lg border border-neutral-200 bg-white text-sm font-medium text-neutral-900 shadow-sm transition-colors hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Skip
                 </button>
               </div>
-            </>
-          ) : null}
-
-          {step === 2 ? (
-            <>
-              <div className="flex flex-col gap-3">
-                <label className="text-xs text-neutral-600" htmlFor="time">
-                  Reminder time
-                </label>
-                <input
-                  id="time"
-                  type="time"
-                  value={notificationTime}
-                  onChange={(e) => setNotificationTime(e.target.value)}
-                  className="h-12 w-full rounded-lg border border-neutral-200 bg-white px-4 text-base text-neutral-900 shadow-sm focus:border-neutral-400 focus:outline-none"
-                />
-                <div className="text-sm text-neutral-600">
-                  Before email, before work, before the day decides for you.
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={finish}
-                disabled={isSaving}
-                className="h-12 w-full rounded-lg bg-neutral-900 text-sm font-medium text-white shadow-sm transition-colors hover:bg-neutral-800 disabled:cursor-not-allowed disabled:bg-neutral-300"
-              >
-                {isSaving ? "Saving…" : "Done"}
-              </button>
             </>
           ) : null}
         </main>
@@ -175,4 +157,3 @@ export default function OnboardingClient({ vapidPublicKey }: Props) {
     </div>
   );
 }
-

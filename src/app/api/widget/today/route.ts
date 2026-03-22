@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
-import { getLocalDateISO, normalizeTimeToHHmm } from "@/lib/utils/date";
+import { getLocalDateISO, getLocalTimeHHmm, normalizeTimeToHHmm } from "@/lib/utils/date";
 import { safeError } from "@/lib/utils/errors";
 import { getProfileForUser, ensureProfileExists } from "@/lib/services/profile";
+import { resolveWidgetToken } from "@/lib/utils/widget-token";
 
 /**
  * Widget API endpoint for fetching today's orientation
@@ -33,43 +34,8 @@ export async function GET(request: NextRequest) {
     // Try widget token authentication first
     if (widgetToken) {
       try {
-        // Use admin client to search for user with matching widget token
-        const adminClient = createSupabaseAdminClient();
-
-        // Paginate through users to find matching widget token
-        let page = 1;
-        const perPage = 1000; // Supabase max per page
-        let foundUser = false;
-
-        while (!foundUser && page <= 10) { // Max 10,000 users
-          const { data, error: searchError } = await adminClient.auth.admin.listUsers({
-            page,
-            perPage,
-          });
-
-          if (searchError) {
-            console.error("Error listing users:", searchError);
-            break;
-          }
-
-          if (data?.users) {
-            const matchedUser = data.users.find(
-              (u) => u.user_metadata?.widget_token === widgetToken
-            );
-            if (matchedUser) {
-              user = { id: matchedUser.id };
-              foundUser = true;
-              break;
-            }
-          }
-
-          // If we got fewer users than perPage, we've reached the end
-          if (!data?.users || data.users.length < perPage) {
-            break;
-          }
-
-          page++;
-        }
+        const userId = await resolveWidgetToken(widgetToken);
+        if (userId) user = { id: userId };
       } catch (tokenError) {
         console.error("Widget token authentication error:", tokenError);
         // Don't fail here, fall through to session auth
@@ -107,20 +73,41 @@ export async function GET(request: NextRequest) {
     // completed full onboarding in the PWA
 
     const today = getLocalDateISO(profile.timezone);
+    const localHHmm = getLocalTimeHHmm(profile.timezone);
+    const localHour = parseInt(localHHmm.split(":")[0], 10);
+    const isPast6am = localHour >= 6;
 
     // Use admin client to bypass RLS for widget token authentication
     const adminClient = createSupabaseAdminClient();
 
-    // Return the most recently locked orientation regardless of date, so the widget
-    // keeps displaying the last set focus until the user sets a new one.
-    const { data: orientation, error: dbError } = await adminClient
-      .from("daily_orientations")
-      .select("text, date, locked_at")
-      .eq("user_id", user.id)
-      .not("locked_at", "is", null)
-      .order("date", { ascending: false })
-      .limit(1)
-      .maybeSingle();
+    // The day "resets" at 6am in the user's timezone:
+    //   Before 6am → carry the most recently locked focus forward so the widget
+    //                never goes blank overnight (e.g. after midnight but before waking up).
+    //   From 6am on → show today's focus only; if not yet set, tell the user to set it.
+    let orientation: { text: string; date: string; locked_at: string } | null = null;
+    let dbError: { message: string } | null = null;
+
+    if (!isPast6am) {
+      const { data, error } = await adminClient
+        .from("daily_orientations")
+        .select("text, date, locked_at")
+        .eq("user_id", user.id)
+        .not("locked_at", "is", null)
+        .order("date", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      orientation = data;
+      dbError = error;
+    } else {
+      const { data, error } = await adminClient
+        .from("daily_orientations")
+        .select("text, date, locked_at")
+        .eq("user_id", user.id)
+        .eq("date", today)
+        .maybeSingle();
+      orientation = data;
+      dbError = error;
+    }
 
     if (dbError) {
       return NextResponse.json(
@@ -135,11 +122,12 @@ export async function GET(request: NextRequest) {
         ? normalizeTimeToHHmm(String(profile.notification_time))
         : null;
     return NextResponse.json({
-      text: orientation?.text || null,
-      date: orientation?.date || today,
+      text: orientation?.text ?? null,
+      date: orientation?.date ?? today,
       locked: !!orientation?.locked_at,
       timezone: profile.timezone,
-      placeholder: orientation ? null : "Not set yet",
+      reset_hour: 6,
+      placeholder: orientation ? null : "Waiting for today's focus",
       ...(reminderTime && { reminder_time: reminderTime }),
     }, {
       headers: {

@@ -164,13 +164,12 @@ class PolarisWidget : AppWidgetProvider() {
 
                     if (response.isSuccessful) {
                         val data = response.body()
-                        val text = data?.text ?: "Not set yet"
+                        val text = data?.text ?: (data?.placeholder ?: "Waiting for today's focus")
                         val date = data?.date ?: todayDate
                         val locked = data?.locked ?: false
 
                         Log.d("PolarisWidget", "Success - Text: $text, Date: $date, Locked: $locked")
 
-                        // Save to cache (include reminder_time and timezone so cache invalidates after reminder time)
                         tokenManager.saveCachedOrientation(
                             text,
                             date,
