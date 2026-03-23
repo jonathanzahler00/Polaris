@@ -117,7 +117,13 @@ class TokenManager(context: Context) {
                 )
                 // It's past 6am and the cached focus is from a previous day → stale
                 if (currentHour >= RESET_HOUR && cachedDate < currentDate) return false
-            } catch (_: Exception) { /* fall through to TTL check */ }
+            } catch (_: Exception) { /* fall through to device-date fallback */ }
+        } else if (!cachedDate.isNullOrBlank()) {
+            // No timezone cached — use the device clock as a fallback so yesterday's
+            // locked entry is never carried into the new calendar day past 6am.
+            val deviceCal = java.util.Calendar.getInstance()
+            val deviceHour = deviceCal.get(java.util.Calendar.HOUR_OF_DAY)
+            if (deviceHour >= RESET_HOUR && cachedDate < todayDate) return false
         }
 
         // Locked data present – valid for CACHE_TTL_MS so we still poll for new focus
@@ -134,12 +140,16 @@ class TokenManager(context: Context) {
         private const val KEY_LAST_FETCH_TIME = "last_fetch_time"
         private const val KEY_CACHED_REMINDER_TIME = "cached_reminder_time"  // "HH:mm"
         private const val KEY_CACHED_TIMEZONE = "cached_timezone"
+        private const val KEY_LAST_FCM_REGISTER_TIME = "last_fcm_register_time"
 
         /** How long a locked cache entry is reused before re-checking the server. */
         private const val CACHE_TTL_MS = 5 * 60 * 1000L  // 5 minutes
 
         /** Hour of day (in user's local timezone) when the daily focus resets. */
         private const val RESET_HOUR = 6
+
+        /** Re-register the FCM token with the server once every 24 hours. */
+        private const val FCM_REGISTER_INTERVAL_MS = 24 * 60 * 60 * 1000L
     }
 
     fun clearCache() {
@@ -151,5 +161,18 @@ class TokenManager(context: Context) {
             .remove(KEY_CACHED_REMINDER_TIME)
             .remove(KEY_CACHED_TIMEZONE)
             .apply()
+    }
+
+    /**
+     * Returns true if enough time has passed since the FCM token was last registered
+     * with the server, meaning it should be re-registered to stay fresh.
+     */
+    fun shouldReRegisterFcm(): Boolean {
+        val lastRegistered = prefs.getLong(KEY_LAST_FCM_REGISTER_TIME, 0L)
+        return System.currentTimeMillis() - lastRegistered > FCM_REGISTER_INTERVAL_MS
+    }
+
+    fun markFcmRegistered() {
+        prefs.edit().putLong(KEY_LAST_FCM_REGISTER_TIME, System.currentTimeMillis()).apply()
     }
 }

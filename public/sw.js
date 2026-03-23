@@ -128,17 +128,15 @@ self.addEventListener("notificationclick", (event) => {
     (async () => {
       const allClients = await clients.matchAll({ type: "window", includeUncontrolled: true });
 
-      // If there's an existing window, navigate it
+      // Find an existing app window, focus it, then navigate to the target URL
       for (const client of allClients) {
-        if ("navigate" in client) {
-          await client.navigate(url);
-          if ("focus" in client) {
-            return client.focus();
-          }
-        }
+        if (!client.url.startsWith(self.location.origin)) continue;
+        if ("focus" in client) await client.focus();
+        if ("navigate" in client) await client.navigate(url);
+        return;
       }
 
-      // Otherwise open a new window
+      // No existing window — open a new one
       if (clients.openWindow) {
         return clients.openWindow(url);
       }

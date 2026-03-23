@@ -64,42 +64,76 @@ export async function GET(request: Request) {
       .eq("user_id", profile.user_id)
       .eq("date", today);
 
-    const { data: subsData, error: subsError } = await admin
+    let anySuccess = false;
+
+    // --- Web Push (browser / PWA) ---
+    const { data: subsData } = await admin
       .from("push_subscriptions")
-      .select("id,endpoint,p256dh,auth,is_active")
+      .select("id,endpoint,p256dh,auth")
       .eq("user_id", profile.user_id)
       .eq("is_active", true);
 
-    if (subsError || !subsData || subsData.length === 0) continue;
+    if (subsData && subsData.length > 0) {
+      const subs = subsData as Array<{
+        id: string;
+        endpoint: string;
+        p256dh: string;
+        auth: string;
+      }>;
 
-    const subs = subsData as Array<{
-      id: string;
-      endpoint: string;
-      p256dh: string;
-      auth: string;
-      is_active: boolean;
-    }>;
-
-    let anySuccess = false;
-
-    for (const sub of subs) {
-      try {
-        await webPush.sendNotification(
-          {
-            endpoint: sub.endpoint,
-            keys: { p256dh: sub.p256dh, auth: sub.auth },
-          },
-          JSON.stringify({ title: NOTIFICATION_TITLE, body: NOTIFICATION_BODY }),
-        );
-        anySuccess = true;
-      } catch (err) {
-        const statusCode = (err as { statusCode?: number }).statusCode;
-        if (statusCode === 404 || statusCode === 410) {
-          await admin
-            .from("push_subscriptions")
-            .update({ is_active: false })
-            .eq("id", sub.id);
+      for (const sub of subs) {
+        try {
+          await webPush.sendNotification(
+            {
+              endpoint: sub.endpoint,
+              keys: { p256dh: sub.p256dh, auth: sub.auth },
+            },
+            JSON.stringify({ title: NOTIFICATION_TITLE, body: NOTIFICATION_BODY }),
+          );
+          anySuccess = true;
+        } catch (err) {
+          const statusCode = (err as { statusCode?: number }).statusCode;
+          if (statusCode === 404 || statusCode === 410) {
+            await admin
+              .from("push_subscriptions")
+              .update({ is_active: false })
+              .eq("id", sub.id);
+          }
         }
+      }
+    }
+
+    // --- Native FCM (Capacitor app: Android / iOS) ---
+    if (process.env.FIREBASE_SERVICE_ACCOUNT_JSON) {
+      const { data: appTokenRows } = await admin
+        .from("fcm_tokens")
+        .select("id,token")
+        .eq("user_id", profile.user_id)
+        .eq("is_active", true)
+        .ilike("device_info", "app:%");
+
+      if (appTokenRows && appTokenRows.length > 0) {
+        const appTokens = (
+          appTokenRows as Array<{ id: string; token: string }>
+        ).map((r) => r.token);
+
+        const { sendAppPushNotification } = await import("@/lib/firebase-admin");
+        const staleTokens = await sendAppPushNotification(
+          appTokens,
+          NOTIFICATION_TITLE,
+          NOTIFICATION_BODY,
+        );
+
+        if (staleTokens.length > 0) {
+          await admin
+            .from("fcm_tokens")
+            .update({ is_active: false })
+            .in("token", staleTokens)
+            .eq("user_id", profile.user_id);
+        }
+
+        // Count as success if at least one delivery wasn't stale
+        if (appTokens.length > staleTokens.length) anySuccess = true;
       }
     }
 

@@ -70,11 +70,14 @@ async function pushWidgetRefresh(userId: string): Promise<void> {
 
   const admin = createSupabaseAdminClient();
 
+  // Only target widget tokens — app tokens (device_info starts with "app:")
+  // are not the Android widget app and don't handle widget_refresh messages.
   const { data: rows } = await admin
     .from("fcm_tokens")
     .select("id, token")
     .eq("user_id", userId)
-    .eq("is_active", true);
+    .eq("is_active", true)
+    .not("device_info", "ilike", "app:%");
 
   if (!rows || rows.length === 0) return;
 

@@ -54,7 +54,7 @@ class PolarisFirebaseMessagingService : FirebaseMessagingService() {
             Log.d(TAG, "No widget token yet – FCM registration deferred")
             return
         }
-        sendFcmTokenToServer(fcmToken, widgetToken, tokenManager.getBaseUrl())
+        sendFcmTokenToServer(fcmToken, widgetToken, tokenManager.getBaseUrl(), this)
     }
 
     companion object {
@@ -71,12 +71,17 @@ class PolarisFirebaseMessagingService : FirebaseMessagingService() {
             com.google.firebase.messaging.FirebaseMessaging.getInstance().token
                 .addOnSuccessListener { fcmToken ->
                     CoroutineScope(Dispatchers.IO).launch {
-                        sendFcmTokenToServer(fcmToken, widgetToken, tokenManager.getBaseUrl())
+                        sendFcmTokenToServer(fcmToken, widgetToken, tokenManager.getBaseUrl(), context)
                     }
                 }
         }
 
-        fun sendFcmTokenToServer(fcmToken: String, widgetToken: String, baseUrl: String) {
+        fun sendFcmTokenToServer(
+            fcmToken: String,
+            widgetToken: String,
+            baseUrl: String,
+            context: android.content.Context? = null
+        ) {
             try {
                 val client = OkHttpClient()
                 val json = JSONObject().apply {
@@ -93,6 +98,9 @@ class PolarisFirebaseMessagingService : FirebaseMessagingService() {
 
                 val response = client.newCall(request).execute()
                 Log.d(TAG, "FCM token registered: ${response.code}")
+                if (response.isSuccessful && context != null) {
+                    TokenManager(context).markFcmRegistered()
+                }
                 response.close()
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to register FCM token: ${e.message}")
