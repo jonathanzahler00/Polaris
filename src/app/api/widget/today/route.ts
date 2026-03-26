@@ -134,7 +134,7 @@ export async function GET(request: NextRequest) {
         // Allow CORS for widget apps (they may use webview)
         "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Methods": "GET",
-        "Cache-Control": "private, max-age=60", // Cache for 1 minute
+        "Cache-Control": "no-store", // Widget has its own cache; HTTP cache causes stale data after FCM refresh
       },
     });
   } catch (error) {

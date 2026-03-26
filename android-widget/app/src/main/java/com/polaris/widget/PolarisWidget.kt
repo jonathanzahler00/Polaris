@@ -125,9 +125,24 @@ class PolarisWidget : AppWidgetProvider() {
             CoroutineScope(Dispatchers.IO).launch {
                 val startTime = System.currentTimeMillis()
                 val timestamp = java.text.SimpleDateFormat("HH:mm:ss.SSS", java.util.Locale.US).format(java.util.Date())
-                val todayDate = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(java.util.Date())
 
                 try {
+                    // Compute "today" in the user's Polaris timezone (not device tz)
+                    // so the 6am boundary check in isCacheValidForToday is accurate.
+                    val cachedTz = tokenManager.getCachedTimezone()
+                    val todayDate = if (!cachedTz.isNullOrBlank()) {
+                        val userZone = java.util.TimeZone.getTimeZone(cachedTz)
+                        val cal = java.util.Calendar.getInstance(userZone)
+                        String.format(
+                            "%04d-%02d-%02d",
+                            cal.get(java.util.Calendar.YEAR),
+                            cal.get(java.util.Calendar.MONTH) + 1,
+                            cal.get(java.util.Calendar.DAY_OF_MONTH)
+                        )
+                    } else {
+                        java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(java.util.Date())
+                    }
+
                     // Check if we have valid cached data for today
                     if (tokenManager.isCacheValidForToday(todayDate)) {
                         val cachedText = tokenManager.getCachedText() ?: "Not set yet"

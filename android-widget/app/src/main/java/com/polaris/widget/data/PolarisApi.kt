@@ -54,6 +54,17 @@ object PolarisApiClient {
         }
 
         val clientBuilder = OkHttpClient.Builder()
+        // Force fresh responses — never use OkHttp's HTTP cache.
+        // The widget manages its own SharedPreferences cache with timezone-aware
+        // 6am boundary logic; OkHttp caching fights with FCM-triggered refreshes
+        // and causes stale previous-day data to persist.
+        clientBuilder.addNetworkInterceptor { chain ->
+            chain.proceed(
+                chain.request().newBuilder()
+                    .header("Cache-Control", "no-cache, no-store")
+                    .build()
+            )
+        }
         if (BuildConfig.DEBUG) {
             val loggingInterceptor = HttpLoggingInterceptor { message ->
                 Log.d("PolarisWidget", "HTTP: $message")
