@@ -47,10 +47,10 @@ export async function POST() {
 // Revoke widget token
 export async function DELETE() {
   try {
-    const user = await getAuthUser();
+    const supabase = await createSupabaseServerClient();
+    const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const supabase = await createSupabaseServerClient();
     const admin = createSupabaseAdminClient();
 
     // Get the current token before clearing it so we can remove it from the lookup table
