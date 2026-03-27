@@ -55,6 +55,9 @@ supabase/
 *.tsbuildinfo
 next-env.d.ts
 
+# Vercel CLI
+AGENTS.md
+
 # Capacitor native build artifacts
 android/app/build/
 android/.gradle/
