@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import webPush from "web-push";
 
-import { getLocalDateISO, getLocalTimeHHmm, normalizeTimeToHHmm } from "@/lib/utils/date";
+import { getLocalDateISO } from "@/lib/utils/date";
 import { getRequiredEnv } from "@/lib/utils/env";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 
@@ -9,19 +9,13 @@ const NOTIFICATION_TITLE = "Time to Set Your Orientation";
 const NOTIFICATION_BODY = "Set your daily focus before the day takes over.";
 
 /**
- * Timezone-aware push notifications.
+ * Daily push notifications — fires once at 10:00 UTC (6:00 AM EDT / 7:00 AM EST).
  *
- * OLD: Ran once at 06:00 UTC → blasted every user regardless of timezone.
- * NEW: Runs every 15 min → only notifies users whose local time is currently
- *      in the [notification_time, notification_time + 15min) window.
+ * Vercel Hobby plan only supports once-per-day crons, so per-user notification_time
+ * windows are not used. All users who haven't been notified today (in their local
+ * timezone) receive the push at cron fire time.
  *
- * A user in America/Los_Angeles gets their push at ~6:00 AM PT.
- * A user in Europe/Berlin gets theirs at ~6:00 AM CET.
- *
- * `last_notified_on` still guards against double-sends on retries/overlaps.
- *
- * Vercel cron schedule: "* /15 * * * *" (every 15 min, requires Pro plan).
- * Fallback for Hobby plan: "0 * * * *" (hourly, ±30 min accuracy).
+ * `last_notified_on` guards against double-sends on retries.
  */
 export async function GET(request: Request) {
   const authHeader = request.headers.get("authorization");
@@ -45,10 +39,9 @@ export async function GET(request: Request) {
     getRequiredEnv("VAPID_PRIVATE_KEY"),
   );
 
-  // ── 1. Fetch all notification-enabled users ────────────────────────────
   const { data: profilesData, error: profilesError } = await admin
     .from("profiles")
-    .select("user_id,timezone,notification_time,last_notified_on,onboarding_completed,notifications_enabled")
+    .select("user_id,timezone,last_notified_on,onboarding_completed,notifications_enabled")
     .eq("onboarding_completed", true)
     .eq("notifications_enabled", true);
 
@@ -59,51 +52,19 @@ export async function GET(request: Request) {
   const profiles = profilesData as Array<{
     user_id: string;
     timezone: string;
-    notification_time: string | null;
     last_notified_on: string | null;
   }>;
 
-  // ── 2. Filter to users in their local notification window ──────────────
-  //
-  // For each user, check if their local time RIGHT NOW falls within
-  // [notification_time, notification_time + WINDOW_MINUTES).
-  // Default notification_time is "06:00" if not set.
-  //
-  // The cron fires every WINDOW_MINUTES, so this covers all timezones
-  // with no gaps and no overlaps (guarded by last_notified_on).
-
-  const WINDOW_MINUTES = 15;
-  const eligible: typeof profiles = [];
-
-  for (const profile of profiles) {
-    const tz = profile.timezone || "America/New_York";
-    const today = getLocalDateISO(tz);
-
-    // Already notified today?
-    if (profile.last_notified_on === today) continue;
-
-    // What time is it locally for this user?
-    const localTimeStr = getLocalTimeHHmm(tz); // "HH:mm"
-    const [localH, localM] = localTimeStr.split(":").map(Number);
-    const localMinutes = localH * 60 + localM;
-
-    // What's their preferred notification time?
-    const rawNotifTime = profile.notification_time || "06:00";
-    const notifTimeStr = normalizeTimeToHHmm(rawNotifTime); // "HH:mm"
-    const [notifH, notifM] = notifTimeStr.split(":").map(Number);
-    const notifMinutes = notifH * 60 + notifM;
-
-    // Is local time inside [notifTime, notifTime + WINDOW)?
-    if (localMinutes >= notifMinutes && localMinutes < notifMinutes + WINDOW_MINUTES) {
-      eligible.push(profile);
-    }
-  }
+  // Only notify users who haven't been notified today in their local timezone
+  const eligible = profiles.filter((p) => {
+    const today = getLocalDateISO(p.timezone || "America/New_York");
+    return p.last_notified_on !== today;
+  });
 
   if (eligible.length === 0) {
     return NextResponse.json({ ok: true, sent: 0, eligible: 0, total: profiles.length });
   }
 
-  // ── 3. Send notifications to eligible users ────────────────────────────
   let sent = 0;
 
   for (const profile of eligible) {
