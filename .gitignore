@@ -58,9 +58,13 @@ next-env.d.ts
 # Vercel CLI
 AGENTS.md
 
+# Android - sensitive config (key is restricted, but don't re-expose on future public repo)
+android-widget/app/google-services.json
+
 # Capacitor native build artifacts
 android/app/build/
 android/.gradle/
 android/local.properties
 ios/App/Pods/
 ios/DerivedData/
+.env*.local
