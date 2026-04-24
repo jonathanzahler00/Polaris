@@ -46,6 +46,7 @@ export async function GET(request: Request) {
     .eq("notifications_enabled", true);
 
   if (profilesError || !profilesData) {
+    console.error("[cron/send-notifications] profiles query failed", profilesError);
     return NextResponse.json({ error: "Query failed" }, { status: 500 });
   }
 
@@ -55,21 +56,34 @@ export async function GET(request: Request) {
     last_notified_on: string | null;
   }>;
 
-  // Only notify users who haven't been notified today in their local timezone
   const eligible = profiles.filter((p) => {
     const today = getLocalDateISO(p.timezone || "America/New_York");
     return p.last_notified_on !== today;
   });
+
+  console.log(
+    `[cron/send-notifications] total=${profiles.length} eligible=${eligible.length}`,
+  );
 
   if (eligible.length === 0) {
     return NextResponse.json({ ok: true, sent: 0, eligible: 0, total: profiles.length });
   }
 
   let sent = 0;
+  let selfHealed = 0;
+  const perUser: Array<{
+    user_id: string;
+    web: { attempted: number; succeeded: number; failed: number };
+    fcm: { attempted: number; succeeded: number; failed: number };
+    selfHealed: boolean;
+  }> = [];
 
   for (const profile of eligible) {
     const today = getLocalDateISO(profile.timezone || "America/New_York");
     let anySuccess = false;
+
+    const webStats = { attempted: 0, succeeded: 0, failed: 0 };
+    const fcmStats = { attempted: 0, succeeded: 0, failed: 0 };
 
     // --- Web Push (browser / PWA) ---
     const { data: subsData } = await admin
@@ -87,6 +101,8 @@ export async function GET(request: Request) {
       }>;
 
       for (const sub of subs) {
+        webStats.attempted += 1;
+        const host = safeHost(sub.endpoint);
         try {
           await webPush.sendNotification(
             {
@@ -96,13 +112,29 @@ export async function GET(request: Request) {
             JSON.stringify({ title: NOTIFICATION_TITLE, body: NOTIFICATION_BODY }),
           );
           anySuccess = true;
+          webStats.succeeded += 1;
+          console.log(
+            `[cron/send-notifications] web push OK user=${profile.user_id} host=${host} sub=${sub.id}`,
+          );
         } catch (err) {
+          webStats.failed += 1;
           const statusCode = (err as { statusCode?: number }).statusCode;
-          if (statusCode === 404 || statusCode === 410) {
+          const message = (err as { body?: string; message?: string }).body
+            ?? (err as { message?: string }).message
+            ?? String(err);
+          // 403, 404, 410 all mean the subscription is no longer valid for this VAPID key.
+          if (statusCode === 403 || statusCode === 404 || statusCode === 410) {
             await admin
               .from("push_subscriptions")
               .update({ is_active: false })
               .eq("id", sub.id);
+            console.warn(
+              `[cron/send-notifications] web push expired user=${profile.user_id} host=${host} sub=${sub.id} status=${statusCode} → deactivated`,
+            );
+          } else {
+            console.error(
+              `[cron/send-notifications] web push error user=${profile.user_id} host=${host} sub=${sub.id} status=${statusCode ?? "n/a"} message=${message}`,
+            );
           }
         }
       }
@@ -121,6 +153,7 @@ export async function GET(request: Request) {
         const appTokens = (
           appTokenRows as Array<{ id: string; token: string }>
         ).map((r) => r.token);
+        fcmStats.attempted = appTokens.length;
 
         const { sendAppPushNotification } = await import("@/lib/firebase-admin");
         const staleTokens = await sendAppPushNotification(
@@ -137,9 +170,38 @@ export async function GET(request: Request) {
             .eq("user_id", profile.user_id);
         }
 
-        if (appTokens.length > staleTokens.length) anySuccess = true;
+        const liveCount = appTokens.length - staleTokens.length;
+        fcmStats.succeeded = liveCount;
+        fcmStats.failed = staleTokens.length;
+
+        if (liveCount > 0) anySuccess = true;
       }
     }
+
+    // --- Self-heal: a profile opted-in but all channels are dead/missing ---
+    // If there is nothing we can actually deliver to, flip the flag off so the
+    // Settings UI prompts the user to re-enable (which triggers re-subscribe).
+    let healed = false;
+    if (webStats.attempted === 0 && fcmStats.attempted === 0) {
+      const { error: healError } = await admin
+        .from("profiles")
+        .update({ notifications_enabled: false })
+        .eq("user_id", profile.user_id);
+      if (!healError) {
+        healed = true;
+        selfHealed += 1;
+        console.warn(
+          `[cron/send-notifications] self-heal user=${profile.user_id} — notifications_enabled=true but no active subs, flipped to false`,
+        );
+      }
+    }
+
+    perUser.push({
+      user_id: profile.user_id,
+      web: webStats,
+      fcm: fcmStats,
+      selfHealed: healed,
+    });
 
     if (anySuccess) {
       sent += 1;
@@ -150,5 +212,24 @@ export async function GET(request: Request) {
     }
   }
 
-  return NextResponse.json({ ok: true, sent, eligible: eligible.length, total: profiles.length });
+  console.log(
+    `[cron/send-notifications] done sent=${sent} eligible=${eligible.length} total=${profiles.length} selfHealed=${selfHealed}`,
+  );
+
+  return NextResponse.json({
+    ok: true,
+    sent,
+    eligible: eligible.length,
+    total: profiles.length,
+    selfHealed,
+    perUser,
+  });
+}
+
+function safeHost(endpoint: string): string {
+  try {
+    return new URL(endpoint).host;
+  } catch {
+    return "unknown";
+  }
 }
