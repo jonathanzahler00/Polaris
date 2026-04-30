@@ -20,10 +20,11 @@ if ($LASTEXITCODE -ne 0) {
     exit 1
 }
 
-Write-Host "`nKeystore already exists: polaris-widget.keystore" -ForegroundColor Green
-Write-Host "Password: ***REMOVED***" -ForegroundColor Yellow
+# Keystore credentials are read from ~/.gradle/gradle.properties
+# (POLARIS_KEYSTORE_PATH / POLARIS_KEYSTORE_PASSWORD / POLARIS_KEY_ALIAS / POLARIS_KEY_PASSWORD).
+# If those properties aren't set, the build falls back to the debug signing config
+# (see android-widget/app/build.gradle.kts).
 
-# Build the APK
 Write-Host "`nBuilding production release APK (prod flavor)..." -ForegroundColor Green
 .\gradlew.bat assembleProdRelease
 
