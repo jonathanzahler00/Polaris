@@ -17,11 +17,20 @@ const MonthClipsSettings = dynamic(
   { ssr: false }
 );
 
+const MonthlyReportSettings = dynamic(
+  () => import("@/components/features/settings/MonthlyReportSettings"),
+  { ssr: false }
+);
+
 type Props = {
   vapidPublicKey?: string;
+  monthlyReportEnabled?: boolean;
 };
 
-export default function SettingsClient({ vapidPublicKey = "" }: Props) {
+export default function SettingsClient({
+  vapidPublicKey = "",
+  monthlyReportEnabled = false,
+}: Props) {
   return (
     <div className="min-h-screen w-full">
       <div className="mx-auto flex min-h-screen w-full max-w-xl flex-col px-6 py-10">
@@ -54,6 +63,8 @@ export default function SettingsClient({ vapidPublicKey = "" }: Props) {
           </div>
 
           <MonthClipsSettings />
+
+          <MonthlyReportSettings initialEnabled={monthlyReportEnabled} />
 
           <ReminderSettings vapidPublicKey={vapidPublicKey} />
         </main>

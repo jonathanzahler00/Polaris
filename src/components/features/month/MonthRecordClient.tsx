@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 
+import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
+
 const MAX_SECONDS = 60;
 
 function formatTime(seconds: number): string {
@@ -15,12 +17,26 @@ type Props = {
   currentMonthKey: string;
   currentMonthLabel: string;
   hasRecordedThisMonth: boolean;
+  previousMonthKey: string;
+  previousMonthLabel: string;
+  hasRecordedPreviousMonth: boolean;
+};
+
+type SignResponse = {
+  token: string;
+  path: string;
+  bucket: string;
+  month: string;
+  content_type: string;
 };
 
 export default function MonthRecordClient({
   currentMonthKey,
   currentMonthLabel,
   hasRecordedThisMonth,
+  previousMonthKey,
+  previousMonthLabel,
+  hasRecordedPreviousMonth,
 }: Props) {
   const [mediaType, setMediaType] = useState<"audio" | "video">("audio");
   const [status, setStatus] = useState<"idle" | "recording" | "stopped" | "uploading" | "done">(
@@ -29,9 +45,14 @@ export default function MonthRecordClient({
   const [seconds, setSeconds] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [blob, setBlob] = useState<Blob | null>(null);
+  const [blobMime, setBlobMime] = useState<string>("audio/webm");
   const [playbackUrl, setPlaybackUrl] = useState<string | null>(null);
   const [playbackMediaType, setPlaybackMediaType] = useState<"audio" | "video">("audio");
   const [playbackLoading, setPlaybackLoading] = useState(false);
+  const [prevPlaybackUrl, setPrevPlaybackUrl] = useState<string | null>(null);
+  const [prevPlaybackMediaType, setPrevPlaybackMediaType] = useState<"audio" | "video">("audio");
+  const [prevPlaybackLoading, setPrevPlaybackLoading] = useState(false);
+  const [prevError, setPrevError] = useState<string | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const recorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
@@ -64,20 +85,28 @@ export default function MonthRecordClient({
       );
       streamRef.current = stream;
       const mime = isVideo
-        ? (MediaRecorder.isTypeSupported("video/webm;codecs=vp9,opus")
-            ? "video/webm;codecs=vp9,opus"
-            : "video/webm")
+        ? MediaRecorder.isTypeSupported("video/webm;codecs=vp9,opus")
+          ? "video/webm;codecs=vp9,opus"
+          : MediaRecorder.isTypeSupported("video/webm;codecs=vp8,opus")
+            ? "video/webm;codecs=vp8,opus"
+            : "video/webm"
         : MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
           ? "audio/webm;codecs=opus"
           : "audio/webm";
-      const recorder = new MediaRecorder(stream);
+      // Pass mimeType so the recorded blob is actually webm (otherwise some
+      // browsers fall back to mp4/whatever and the storage upload mismatches).
+      const recorder = MediaRecorder.isTypeSupported(mime)
+        ? new MediaRecorder(stream, { mimeType: mime })
+        : new MediaRecorder(stream);
       recorderRef.current = recorder;
       recorder.ondataavailable = (e) => {
         if (e.data.size) chunksRef.current.push(e.data);
       };
       recorder.onstop = () => {
-        const b = new Blob(chunksRef.current, { type: mime });
+        const type = isVideo ? "video/webm" : "audio/webm";
+        const b = new Blob(chunksRef.current, { type });
         setBlob(b);
+        setBlobMime(type);
         setStatus("stopped");
       };
       recorder.start(1000);
@@ -92,7 +121,7 @@ export default function MonthRecordClient({
           return s + 1;
         });
       }, 1000);
-    } catch (err) {
+    } catch {
       setError(
         mediaType === "video"
           ? "Camera and microphone access are needed to record."
@@ -112,20 +141,56 @@ export default function MonthRecordClient({
     if (!blob) return;
     setStatus("uploading");
     setError(null);
-    const form = new FormData();
-    form.append("clip", blob, "clip.webm");
-    form.append("duration_seconds", String(seconds));
-    form.append("media_type", mediaType);
-    const res = await fetch("/api/month/record", { method: "POST", body: form });
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({}));
-      setError(data?.error ?? "Upload failed");
+    try {
+      // Step 1: ask the server for a signed Storage upload URL.
+      const signRes = await fetch("/api/month/record/sign", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ media_type: mediaType }),
+      });
+      if (!signRes.ok) {
+        const data = await signRes.json().catch(() => ({}));
+        setError(data?.error ?? "Could not start upload");
+        setStatus("stopped");
+        return;
+      }
+      const sign = (await signRes.json()) as SignResponse;
+
+      // Step 2: upload the blob straight to Supabase Storage. This bypasses
+      // the Vercel function body size limit which video clips routinely hit.
+      const supabase = createSupabaseBrowserClient();
+      const file = new File([blob], "clip.webm", { type: blobMime });
+      const { error: uploadError } = await supabase.storage
+        .from(sign.bucket)
+        .uploadToSignedUrl(sign.path, sign.token, file, {
+          contentType: sign.content_type,
+          upsert: true,
+        });
+      if (uploadError) {
+        setError(uploadError.message || "Upload failed");
+        setStatus("stopped");
+        return;
+      }
+
+      // Step 3: register the metadata row.
+      const completeRes = await fetch("/api/month/record", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ duration_seconds: seconds, media_type: mediaType }),
+      });
+      if (!completeRes.ok) {
+        const data = await completeRes.json().catch(() => ({}));
+        setError(data?.error ?? "Save failed");
+        setStatus("stopped");
+        return;
+      }
+      setStatus("done");
+      window.location.href = "/";
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Upload failed");
       setStatus("stopped");
-      return;
     }
-    setStatus("done");
-    window.location.href = "/";
-  }, [blob, seconds, mediaType]);
+  }, [blob, blobMime, seconds, mediaType]);
 
   const loadPlayback = useCallback(async () => {
     setPlaybackLoading(true);
@@ -146,6 +211,26 @@ export default function MonthRecordClient({
       setPlaybackLoading(false);
     }
   }, [currentMonthKey]);
+
+  const loadPrevPlayback = useCallback(async () => {
+    setPrevPlaybackLoading(true);
+    setPrevError(null);
+    setPrevPlaybackUrl(null);
+    try {
+      const res = await fetch(`/api/month/clip?month=${encodeURIComponent(previousMonthKey)}`);
+      if (!res.ok) {
+        setPrevError(res.status === 404 ? "No clip found." : "Could not load clip.");
+        return;
+      }
+      const data = (await res.json()) as { url: string; media_type?: "audio" | "video" };
+      setPrevPlaybackUrl(data.url);
+      setPrevPlaybackMediaType(data.media_type ?? "audio");
+    } catch {
+      setPrevError("Could not load clip.");
+    } finally {
+      setPrevPlaybackLoading(false);
+    }
+  }, [previousMonthKey]);
 
   return (
     <div className="mx-auto w-full max-w-xl flex flex-col px-6 py-10 flex-1">
@@ -176,6 +261,46 @@ export default function MonthRecordClient({
             <li>· What will you let go of? What will you lean into?</li>
           </ul>
         </div>
+
+        {/* Previous month playback — always shown when one exists, even mid-record */}
+        {hasRecordedPreviousMonth && (
+          <div className="rounded-lg border border-neutral-200 bg-white p-4 space-y-3">
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-sm font-medium text-neutral-900">
+                Last month: {previousMonthLabel}
+              </p>
+              {!prevPlaybackUrl && (
+                <button
+                  type="button"
+                  onClick={loadPrevPlayback}
+                  disabled={prevPlaybackLoading}
+                  className="shrink-0 px-3 py-1.5 rounded-lg border border-neutral-300 text-sm font-medium text-neutral-700 hover:bg-neutral-50 disabled:opacity-50"
+                >
+                  {prevPlaybackLoading ? "Loading…" : "Play"}
+                </button>
+              )}
+            </div>
+            {prevError && (
+              <p className="text-xs text-red-700">{prevError}</p>
+            )}
+            {prevPlaybackUrl && (
+              <>
+                {prevPlaybackMediaType === "video" ? (
+                  <video src={prevPlaybackUrl} controls className="w-full rounded-lg" />
+                ) : (
+                  <audio src={prevPlaybackUrl} controls className="w-full" />
+                )}
+                <button
+                  type="button"
+                  onClick={() => setPrevPlaybackUrl(null)}
+                  className="text-xs text-neutral-500 hover:text-neutral-700"
+                >
+                  Hide player
+                </button>
+              </>
+            )}
+          </div>
+        )}
 
         {error && (
           <div className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-800">{error}</div>

@@ -11,4 +11,4 @@
   - `RESEND_API_KEY` — API key from Resend
   - `RESEND_FROM_EMAIL` — e.g. `Polaris <reports@yourdomain.com>`
 - [ ] Add the same vars to `.env.local` for local testing
-- [ ] Wire up the opt-in toggle in the Settings UI — update `monthly_report_enabled` on the `profiles` row when a user turns it on
+- [x] Wire up the opt-in toggle in the Settings UI — update `monthly_report_enabled` on the `profiles` row when a user turns it on (see `MonthlyReportSettings`)

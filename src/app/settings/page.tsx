@@ -2,7 +2,14 @@ import { getSessionWithProfile } from "@/lib/services/auth";
 import SettingsClient from "@/components/features/settings/SettingsClient";
 
 export default async function SettingsPage() {
-  await getSessionWithProfile();
+  const { profile } = await getSessionWithProfile();
   const vapidPublicKey = process.env.VAPID_PUBLIC_KEY ?? "";
-  return <SettingsClient vapidPublicKey={vapidPublicKey} />;
+  const monthlyReportEnabled = !!(profile as { monthly_report_enabled?: boolean })
+    .monthly_report_enabled;
+  return (
+    <SettingsClient
+      vapidPublicKey={vapidPublicKey}
+      monthlyReportEnabled={monthlyReportEnabled}
+    />
+  );
 }
